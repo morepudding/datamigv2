@@ -3,11 +3,16 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   serverExternalPackages: ['xlsx', 'archiver', 'csv-writer'],
   typescript: {
-    ignoreBuildErrors: true,  // Ignorer temporairement pour le déploiement
+    ignoreBuildErrors: true,
   },
   eslint: {
-    ignoreDuringBuilds: true,  // Ignorer temporairement pour le déploiement
-  }
+    ignoreDuringBuilds: true,
+  },
+  // Configuration spécifique pour Vercel + App Router
+  trailingSlash: false,
+  images: {
+    unoptimized: true,
+  },
 };
 
 export default nextConfig;

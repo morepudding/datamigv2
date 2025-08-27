@@ -16,20 +16,25 @@ export default function RootLayout({
   console.log('📦 Children reçus:', !!children);
   
   return (
-    <html lang="en">
+    <html lang="fr">
       <head>
+        <meta charSet="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
         <script
           dangerouslySetInnerHTML={{
             __html: `
               console.log('🌟 Application PLM Migration chargée avec succès !');
               console.log('🔗 URL:', window.location.href);
               console.log('⏰ Timestamp:', new Date().toISOString());
+              console.log('📱 User Agent:', navigator.userAgent);
             `
           }}
         />
       </head>
       <body className="font-sans antialiased">
-        {children}
+        <div id="__next">
+          {children}
+        </div>
       </body>
     </html>
   );
