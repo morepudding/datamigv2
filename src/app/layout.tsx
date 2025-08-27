@@ -11,8 +11,23 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Logs de debug pour Vercel
+  console.log('🏠 RootLayout - Chargement réussi');
+  console.log('📦 Children reçus:', !!children);
+  
   return (
     <html lang="en">
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              console.log('🌟 Application PLM Migration chargée avec succès !');
+              console.log('🔗 URL:', window.location.href);
+              console.log('⏰ Timestamp:', new Date().toISOString());
+            `
+          }}
+        />
+      </head>
       <body className="font-sans antialiased">
         {children}
       </body>
