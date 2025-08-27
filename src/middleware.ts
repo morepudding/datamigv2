@@ -2,15 +2,15 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
 export function middleware(request: NextRequest) {
-  console.log('🛣️ Middleware - Route:', request.nextUrl.pathname);
-  console.log('🌐 Middleware - Host:', request.nextUrl.host);
+  // Simple logging pour debug
+  console.log('🛣️ Route middleware:', request.nextUrl.pathname);
   
-  // Laisser passer toutes les requêtes sans modification
+  // Laisser passer toutes les requêtes
   return NextResponse.next()
 }
 
 export const config = {
   matcher: [
-    '/((?!api|_next/static|_next/image|favicon.ico|test-static.html).*)',
+    '/((?!_next/static|_next/image|favicon.ico|test-static.html).*)',
   ],
 }
