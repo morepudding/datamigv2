@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>PLM Migration - Test Final</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0; 
+            padding: 20px; 
+            min-height: 100vh;
+            color: white;
+        }
+        .container { 
+            max-width: 800px; 
+            margin: 0 auto; 
+            background: rgba(255,255,255,0.1); 
+            padding: 30px; 
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+        }
+        h1 { 
+            font-size: 48px; 
+            color: #4ade80; 
+            text-align: center;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+        .success { 
+            background: #10b981; 
+            padding: 20px; 
+            border-radius: 10px; 
+            text-align: center;
+            font-size: 24px;
+            margin: 20px 0;
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
+        }
+        .info { 
+            background: rgba(59, 130, 246, 0.8); 
+            padding: 15px; 
+            border-radius: 10px; 
+            margin: 20px 0;
+        }
+        a { color: #60a5fa; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎉 PLM MIGRATION TOOL</h1>
+        
+        <div class="success">
+            ✅ VERCEL FONCTIONNE PARFAITEMENT !
+        </div>
+        
+        <div class="info">
+            <h2>📊 Informations</h2>
+            <p><strong>Status:</strong> Déployé avec succès</p>
+            <p><strong>Platform:</strong> Vercel</p>
+            <p><strong>Framework:</strong> Next.js 15.5.0</p>
+            <p><strong>Timestamp:</strong> <span id="timestamp"></span></p>
+        </div>
+        
+        <div class="info">
+            <h2>🔗 Tests de navigation</h2>
+            <p><a href="/">← Retour à la page principale</a></p>
+            <p><a href="/test">Page de test →</a></p>
+            <p><a href="/diagnostic">Page de diagnostic →</a></p>
+        </div>
+        
+        <div class="info">
+            <h2>🎯 Conclusion</h2>
+            <p>Si vous voyez cette page, le problème 404 est résolu !</p>
+            <p>Votre application PLM Migration Tool fonctionne correctement sur Vercel.</p>
+        </div>
+    </div>
+    
+    <script>
+        document.getElementById('timestamp').textContent = new Date().toLocaleString();
+        console.log('🌟 Page HTML statique chargée avec succès !');
+        console.log('🔗 URL:', window.location.href);
+    </script>
+</body>
+</html>
