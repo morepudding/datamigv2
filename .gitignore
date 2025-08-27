@@ -39,3 +39,25 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# PLM Migration specific
+/tmp/
+/output/
+/logs/
+*.xlsx
+*.xls
+*.csv
+*.zip
+uploads/
+*.backup
+*.bak
+.cache/
+/public/extractors/
+
+# Test coverage
+/coverage
+/tests/coverage
+*.lcov
+
+# Large CSV files
+JY5MB_complete_boat_20250428_0927CEST(in).csv
