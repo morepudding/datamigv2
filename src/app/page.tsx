@@ -3,7 +3,7 @@ export default function HomePage() {
   console.log('🚀 Page HomePage - Rendu réussi');
   console.log('🌐 Environment:', process.env.NODE_ENV);
   console.log('📅 Build time:', new Date().toISOString());
-  console.log('🔗 URL actuelle:', typeof window !== 'undefined' ? window.location.href : 'Server-side');
+  console.log('🔗 URL actuell:', typeof window !== 'undefined' ? window.location.href : 'Server-side');
   
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
