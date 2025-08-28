@@ -112,20 +112,17 @@ export async function POST(request: NextRequest) {
           logger.info('migration', `🔍 Header brut: ${fullHeader.substring(0, 200)}...`);
           
           // Pattern plus précis pour ce format spécial
-          // Le format est: "Structure Level,""Number"",""Name""..."
+          // Le format réel est: "Structure Level,""Number"",""Name""..."
           let parts: string[] = [];
           
-          if (fullHeader.includes('","')) {
-            // Séparer par '","' d'abord 
-            parts = fullHeader.split('","');
-          } else if (fullHeader.includes(',"')) {
-            // Le vrai pattern semble être ',"'
+          if (fullHeader.includes(',"')) {
+            // Le bon pattern est ',"' (virgule + guillemet simple)
             parts = fullHeader.split(',"');
+          } else if (fullHeader.includes('","')) {
+            parts = fullHeader.split('","');
           } else if (fullHeader.includes(',""')) {
-            // Sinon séparer par ',""'
             parts = fullHeader.split(',""');
           } else {
-            // Fallback: séparer par virgule simple
             parts = fullHeader.split(',');
           }
           
@@ -168,10 +165,10 @@ export async function POST(request: NextRequest) {
             const fullRow = rawRow[0];
             let values: string[] = [];
             
-            if (fullRow.includes('","')) {
-              values = fullRow.split('","');
-            } else if (fullRow.includes(',"')) {
+            if (fullRow.includes(',"')) {
               values = fullRow.split(',"');
+            } else if (fullRow.includes('","')) {
+              values = fullRow.split('","');
             } else if (fullRow.includes(',""')) {
               values = fullRow.split(',""');
             } else {
