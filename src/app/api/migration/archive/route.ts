@@ -36,15 +36,36 @@ export async function POST(request: NextRequest) {
 
     // Ajouter les fichiers existants
     const fs = require('fs');
+    console.log(`Tentative d'archivage de ${filePaths.length} fichiers:`);
+    
+    let filesAdded = 0;
+    
     for (const filePath of filePaths) {
       try {
+        console.log(`Vérification fichier: ${filePath}`);
+        
         if (fs.existsSync(filePath)) {
+          const stats = fs.statSync(filePath);
+          console.log(`✅ Fichier trouvé: ${filePath} (${stats.size} bytes)`);
+          
           const fileName = require('path').basename(filePath);
           archive.file(filePath, { name: fileName });
+          filesAdded++;
+        } else {
+          console.log(`❌ Fichier non trouvé: ${filePath}`);
         }
       } catch (error) {
-        console.warn(`Impossible d'ajouter le fichier: ${filePath}`);
+        console.error(`Erreur avec fichier ${filePath}:`, error);
       }
+    }
+    
+    console.log(`📦 ${filesAdded} fichiers ajoutés à l'archive sur ${filePaths.length}`);
+    
+    if (filesAdded === 0) {
+      return NextResponse.json(
+        { error: 'Aucun fichier trouvé pour créer l\'archive' },
+        { status: 404 }
+      );
     }
 
     archive.finalize();

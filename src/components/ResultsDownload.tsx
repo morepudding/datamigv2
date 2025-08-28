@@ -119,7 +119,31 @@ export default function ResultsDownload({
         .map(r => r.outputPath);
         
       console.log(`Fichiers pour archive: ${filePaths.length} fichiers`);
-        
+      console.log(`Archive path: ${archiveResult.archivePath}`);
+      
+      // Essayer d'abord de télécharger l'archive déjà créée
+      if (archiveResult.archivePath && archiveResult.success) {
+        console.log('Tentative téléchargement archive existante...');
+        const response = await fetch(`/api/migration/download?type=archive&path=${encodeURIComponent(archiveResult.archivePath)}`);
+        if (response.ok) {
+          console.log('Archive existante trouvée');
+          const blob = await response.blob();
+          const url = window.URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = `Import_IFS_${projectCode}.zip`;
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+          window.URL.revokeObjectURL(url);
+          console.log('Téléchargement terminé');
+          setDownloadingFile(null);
+          return;
+        }
+      }
+      
+      // Fallback: créer une nouvelle archive
+      console.log('Création nouvelle archive...');
       const response = await fetch('/api/migration/archive', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
