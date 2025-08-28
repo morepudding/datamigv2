@@ -54,10 +54,11 @@ export function validateInputData(data: InputRow[]): ValidationResult {
 
     // Validation du champ State
     const validStates = ['Released', 'In Work', 'Under Review', 'released', 'in work', 'under review'];
-    if (row.State && !validStates.includes(row.State.toString())) {
+    const stateValue = row.State ? row.State.toString().trim() : '';
+    if (stateValue && !validStates.includes(stateValue)) {
       warnings.push({
         type: 'DATA_QUALITY',
-        message: 'State field should be "Released", "In Work", or "Under Review"',
+        message: `State field should be "Released", "In Work", or "Under Review" - got "${stateValue}"`,
         rowIndex: index,
         columnName: 'State',
         value: row.State

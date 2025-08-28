@@ -19,12 +19,13 @@ export async function GET(request: NextRequest) {
     const absolutePath = path.resolve(filePath);
     const allowedDirs = [
       path.resolve(process.cwd(), 'output'),
-      path.resolve(process.cwd(), 'tmp')
+      path.resolve(process.cwd(), 'tmp'),
+      '/tmp' // Vercel tmp directory
     ];
 
     const isPathAllowed = allowedDirs.some(allowedDir => 
       absolutePath.startsWith(allowedDir)
-    );
+    ) || absolutePath.startsWith('/tmp'); // Direct tmp check for Vercel
 
     if (!isPathAllowed) {
       return NextResponse.json(
