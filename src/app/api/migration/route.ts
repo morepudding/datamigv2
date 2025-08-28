@@ -59,17 +59,28 @@ export async function POST(request: NextRequest) {
     
     logger.info('migration', `💾 Fichier sauvegardé temporairement: ${tempFilePath}`);
 
-    // 3. Lecture et validation du fichier Excel
+    // 3. Lecture et validation du fichier (Excel ou CSV)
     let workbook: xlsx.WorkBook;
     let inputData: InputRow[];
     let projectCode = 'XXXXX';
 
     try {
-      workbook = xlsx.readFile(tempFilePath);
+      // Détection du type de fichier et lecture adaptée
+      const isCSV = file.name.toLowerCase().endsWith('.csv');
+      
+      if (isCSV) {
+        logger.info('migration', '📄 Lecture du fichier CSV');
+        workbook = xlsx.readFile(tempFilePath, { type: 'file' });
+      } else {
+        logger.info('migration', '📊 Lecture du fichier Excel');
+        workbook = xlsx.readFile(tempFilePath);
+      }
+      
       const sheetName = workbook.SheetNames[0];
       inputData = xlsx.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: '' });
       
       logger.info('migration', `📊 Données lues: ${inputData.length} lignes, ${Object.keys(inputData[0] || {}).length} colonnes`);
+      logger.info('migration', `📋 Type de fichier: ${isCSV ? 'CSV' : 'Excel'}`);
       
       // Extraction du code projet depuis la première ligne
       if (inputData.length > 0 && inputData[0]['Context']) {
@@ -80,10 +91,10 @@ export async function POST(request: NextRequest) {
         }
       }
     } catch (error) {
-      logger.error('migration', 'Erreur lors de la lecture du fichier Excel: ' + (error instanceof Error ? error.message : 'Erreur inconnue'));
+      logger.error('migration', 'Erreur lors de la lecture du fichier: ' + (error instanceof Error ? error.message : 'Erreur inconnue'));
       await cleanupTempFile(tempFilePath);
       return NextResponse.json(
-        { error: 'Erreur lors de la lecture du fichier Excel. Vérifiez le format.' },
+        { error: 'Erreur lors de la lecture du fichier. Vérifiez que le format est correct (Excel .xlsx ou CSV .csv).' },
         { status: 400 }
       );
     }

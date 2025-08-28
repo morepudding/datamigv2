@@ -268,12 +268,12 @@ export default function HomePage() {
                   <span className="text-white font-bold text-sm">1</span>
                 </div>
                 <h2 className="text-xl font-semibold text-slate-900">
-                  Sélectionner le fichier Excel PLM
+                  Sélectionner le fichier PLM (Excel ou CSV)
                 </h2>
               </div>
               <FileUploader
                 onFileSelect={handleFileSelect}
-                acceptedTypes={['.xlsx']}
+                acceptedTypes={['.xlsx', '.csv']}
                 maxSize={50 * 1024 * 1024}
               />
               
@@ -394,7 +394,7 @@ export default function HomePage() {
                   <div className="text-sm text-blue-700 space-y-3">
                     <p>
                       Cette application transforme les données PLM (Product Lifecycle Management) 
-                      au format Excel vers <strong>5 fichiers CSV</strong> compatibles avec le système IFS.
+                      au format Excel (.xlsx) ou CSV (.csv) vers <strong>5 fichiers CSV</strong> compatibles avec le système IFS.
                     </p>
                     <div className="bg-white/50 rounded-lg p-3 border border-blue-200">
                       <p className="font-semibold mb-2 text-blue-800">Modules de traitement :</p>
@@ -422,7 +422,7 @@ export default function HomePage() {
                       </div>
                     </div>
                     <p className="text-xs bg-blue-50 rounded-lg p-2 border border-blue-100">
-                      <strong>Format requis :</strong> Fichier Excel (.xlsx) avec colonnes : 
+                      <strong>Formats acceptés :</strong> Fichier Excel (.xlsx) ou CSV (.csv) avec colonnes : 
                       Number, Name, Classification, Source, State, Version, Context, etc.
                     </p>
                   </div>

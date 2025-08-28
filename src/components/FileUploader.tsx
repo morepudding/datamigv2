@@ -47,9 +47,12 @@ export default function FileUploader({
     if (acceptedFiles.length > 0) {
       const file = acceptedFiles[0];
       
-      // Validation supplémentaire du type MIME
-      if (!file.type.includes('spreadsheet') && !file.name.toLowerCase().endsWith('.xlsx')) {
-        setError('Seuls les fichiers Excel (.xlsx) sont acceptés');
+      // Validation supplémentaire du type MIME pour Excel et CSV
+      const isValidExcel = file.type.includes('spreadsheet') || file.name.toLowerCase().endsWith('.xlsx');
+      const isValidCSV = file.type.includes('text/csv') || file.type === 'application/csv' || file.name.toLowerCase().endsWith('.csv');
+      
+      if (!isValidExcel && !isValidCSV) {
+        setError('Seuls les fichiers Excel (.xlsx) et CSV (.csv) sont acceptés');
         return;
       }
 
@@ -68,7 +71,9 @@ export default function FileUploader({
   const { getRootProps, getInputProps, isDragActive, isDragAccept, isDragReject } = useDropzone({
     onDrop,
     accept: {
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx']
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
+      'text/csv': ['.csv'],
+      'application/csv': ['.csv']
     },
     maxSize,
     multiple: false,
@@ -162,13 +167,13 @@ export default function FileUploader({
               </div>
             ) : isDragActive ? (
               <div className="animate-pulse">
-                <p className="text-blue-600 font-semibold text-lg">✨ Déposez le fichier Excel ici...</p>
+                <p className="text-blue-600 font-semibold text-lg">✨ Déposez votre fichier PLM ici...</p>
                 <p className="text-blue-500 text-sm">Nous nous occuperons du reste !</p>
               </div>
             ) : (
               <div className="group-hover:animate-fade-in-up">
                 <p className="text-slate-700 font-semibold text-lg">
-                  📁 Glissez-déposez un fichier Excel ici
+                  📁 Glissez-déposez votre fichier PLM ici
                 </p>
                 <p className="text-slate-500 text-sm mt-2">
                   ou <span className="text-blue-600 font-medium">cliquez pour parcourir</span>
