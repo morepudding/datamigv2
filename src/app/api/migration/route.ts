@@ -109,11 +109,32 @@ export async function POST(request: NextRequest) {
         // Parser la première ligne qui contient tous les headers concaténés
         if (rawHeaders.length === 1 && typeof rawHeaders[0] === 'string') {
           const fullHeader = rawHeaders[0];
-          // Séparer par virgules en tenant compte des guillemets
-          const parts = fullHeader.split(',""').map(part => 
-            part.replace(/^"*|"*$/g, '').replace(/""/g, '"')
-          );
-          headers.push(...parts);
+          logger.info('migration', `🔍 Header brut: ${fullHeader.substring(0, 200)}...`);
+          
+          // Pattern plus précis pour ce format spécial
+          // Le format est: "Structure Level,""Number"",""Name""..."
+          let parts: string[] = [];
+          
+          if (fullHeader.includes('","')) {
+            // Séparer par '","' d'abord 
+            parts = fullHeader.split('","');
+          } else if (fullHeader.includes(',"')) {
+            // Le vrai pattern semble être ',"'
+            parts = fullHeader.split(',"');
+          } else if (fullHeader.includes(',""')) {
+            // Sinon séparer par ',""'
+            parts = fullHeader.split(',""');
+          } else {
+            // Fallback: séparer par virgule simple
+            parts = fullHeader.split(',');
+          }
+          
+          // Nettoyer chaque partie
+          headers.push(...parts.map(part => 
+            part.replace(/^"*|"*$/g, '').replace(/""/g, '"').trim()
+          ));
+          
+          logger.info('migration', `🔧 Méthode de split utilisée, ${parts.length} parties détectées`);
         } else {
           // Headers déjà séparés
           headers.push(...rawHeaders.map(h => String(h).replace(/^"*|"*$/g, '').replace(/""/g, '"')));
@@ -129,10 +150,23 @@ export async function POST(request: NextRequest) {
           const rowData: any = {};
           
           if (rawRow.length === 1 && typeof rawRow[0] === 'string') {
-            // Ligne concaténée, la séparer
+            // Ligne concaténée, la séparer avec la même méthode que les headers
             const fullRow = rawRow[0];
-            const values = fullRow.split(',""').map(val => 
-              val.replace(/^"*|"*$/g, '').replace(/""/g, '"')
+            let values: string[] = [];
+            
+            if (fullRow.includes('","')) {
+              values = fullRow.split('","');
+            } else if (fullRow.includes(',"')) {
+              values = fullRow.split(',"');
+            } else if (fullRow.includes(',""')) {
+              values = fullRow.split(',""');
+            } else {
+              values = fullRow.split(',');
+            }
+            
+            // Nettoyer les valeurs
+            values = values.map(val => 
+              val.replace(/^"*|"*$/g, '').replace(/""/g, '"').trim()
             );
             
             // Mapper aux headers
