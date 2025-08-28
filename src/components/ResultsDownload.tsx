@@ -111,63 +111,53 @@ export default function ResultsDownload({
     
     setDownloadingFile(`Import_IFS_${projectCode}.zip`);
     
-    // Utilisation directe de l'API archive (plus fiable sur Vercel)
-    console.log('Création d\'archive à la demande...');
     try {
-      const filePaths = processingResults
-        .filter(r => r.success && r.outputPath)
-        .map(r => r.outputPath);
+      const archivePath = archiveResult.archivePath;
+      console.log('📦 Archive path:', archivePath);
+      
+      // Si c'est un data URL (base64), télécharger directement
+      if (archivePath.startsWith('data:application/zip;base64,')) {
+        console.log('💾 Téléchargement archive base64...');
         
-      console.log(`Fichiers pour archive: ${filePaths.length} fichiers`);
-      console.log(`Archive path: ${archiveResult.archivePath}`);
-      
-      // Essayer d'abord de télécharger l'archive déjà créée
-      if (archiveResult.archivePath && archiveResult.success) {
-        console.log('Tentative téléchargement archive existante...');
-        const response = await fetch(`/api/migration/download?type=archive&path=${encodeURIComponent(archiveResult.archivePath)}`);
-        if (response.ok) {
-          console.log('Archive existante trouvée');
-          const blob = await response.blob();
-          const url = window.URL.createObjectURL(blob);
-          const link = document.createElement('a');
-          link.href = url;
-          link.download = `Import_IFS_${projectCode}.zip`;
-          document.body.appendChild(link);
-          link.click();
-          link.remove();
-          window.URL.revokeObjectURL(url);
-          console.log('Téléchargement terminé');
-          setDownloadingFile(null);
-          return;
-        }
-      }
-      
-      // Fallback: créer une nouvelle archive
-      console.log('Création nouvelle archive...');
-      const response = await fetch('/api/migration/archive', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ filePaths, projectCode })
-      });
-      
-      if (response.ok) {
-        console.log('Archive créée avec succès');
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
+        // Créer un lien de téléchargement direct
         const link = document.createElement('a');
-        link.href = url;
+        link.href = archivePath;
         link.download = `Import_IFS_${projectCode}.zip`;
         document.body.appendChild(link);
         link.click();
-        link.remove();
-        window.URL.revokeObjectURL(url);
-        console.log('Téléchargement terminé');
-      } else {
-        const errorText = await response.text();
-        throw new Error(`Erreur HTTP ${response.status}: ${errorText}`);
+        document.body.removeChild(link);
+        
+        console.log('✅ Archive téléchargée avec succès');
+        setDownloadingFile(null);
+        return;
       }
+      
+      // Fallback pour les anciens chemins de fichiers (ne devrait plus arriver)
+      console.log('🔄 Fallback: tentative téléchargement fichier...');
+      
+      const response = await fetch(`/api/migration/download?type=archive&path=${encodeURIComponent(archivePath)}`);
+      
+      if (!response.ok) {
+        throw new Error(`Erreur HTTP ${response.status}: ${await response.text()}`);
+      }
+
+      const blob = await response.blob();
+      if (blob.size === 0) {
+        throw new Error('Le fichier archive est vide');
+      }
+
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Import_IFS_${projectCode}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+      console.log('✅ Archive téléchargée avec succès (fallback)');
     } catch (error) {
-      console.error('Erreur téléchargement archive:', error);
+      console.error('❌ Erreur téléchargement archive:', error);
       alert(`Impossible de télécharger l'archive: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
     }
     

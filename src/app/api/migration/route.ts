@@ -346,12 +346,45 @@ export async function POST(request: NextRequest) {
     let archiveResult: ArchiveResult;
     
     if (filePaths.length > 0) {
-      const archivePath = path.join(outputDir, `migration_${projectCode}_${Date.now()}.zip`);
-      logger.info('migration', `🗂️ Chemin d'archive: ${archivePath}`);
-      
       try {
-        archiveResult = await createZipArchive(filePaths, archivePath);
-        logger.info('migration', `✅ Archive créée: ${archiveResult.success ? 'succès' : 'échec'} - ${archiveResult.archivePath}`);
+        // Au lieu de créer un fichier ZIP, créons l'archive en mémoire
+        const archiver = require('archiver');
+        const archive = archiver('zip', { zlib: { level: 9 } });
+        
+        const chunks: Buffer[] = [];
+        const archivePromise = new Promise<Buffer>((resolve, reject) => {
+          archive.on('data', (chunk: Buffer) => chunks.push(chunk));
+          archive.on('end', () => resolve(Buffer.concat(chunks)));
+          archive.on('error', reject);
+        });
+        
+        // Ajouter les fichiers à l'archive
+        const fs = require('fs');
+        for (const filePath of filePaths) {
+          if (fs.existsSync(filePath)) {
+            const fileName = require('path').basename(filePath);
+            archive.file(filePath, { name: fileName });
+            logger.info('migration', `� Fichier ajouté à l'archive: ${fileName}`);
+          } else {
+            logger.warn('migration', `⚠️ Fichier manquant pour archive: ${filePath}`);
+          }
+        }
+        
+        archive.finalize();
+        const archiveBuffer = await archivePromise;
+        
+        // Convertir en base64 pour inclure dans la réponse
+        const archiveBase64 = archiveBuffer.toString('base64');
+        
+        archiveResult = {
+          success: true,
+          archivePath: `data:application/zip;base64,${archiveBase64}`,
+          archiveSize: archiveBuffer.length,
+          filesIncluded: filePaths.map(p => require('path').basename(p)),
+          projectCode
+        };
+        
+        logger.info('migration', `✅ Archive créée en mémoire: ${archiveResult.archiveSize} bytes`);
       } catch (error) {
         logger.error('migration', `❌ Erreur création archive: ${error}`);
         archiveResult = {

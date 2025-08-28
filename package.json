@@ -15,7 +15,7 @@
     "test:basic": "jest tests/basic-system.test.ts",
     "test:simple": "jest tests/simple-validation.test.ts",
     "test:business": "jest tests/business-validation.test.ts",
-    "test:processors": "jest tests/processors-integration.test.ts", 
+    "test:processors": "jest tests/processors-integration.test.ts",
     "test:docs": "jest tests/document-generation.test.ts",
     "test:all": "jest tests/business-validation.test.ts tests/processors-integration.test.ts tests/document-generation.test.ts",
     "test:watch": "jest --watch",
