@@ -129,10 +129,23 @@ export async function POST(request: NextRequest) {
             parts = fullHeader.split(',');
           }
           
-          // Nettoyer chaque partie
-          headers.push(...parts.map(part => 
-            part.replace(/^"*|"*$/g, '').replace(/""/g, '"').trim()
-          ));
+          // Nettoyer chaque partie plus agressivement
+          headers.push(...parts.map(part => {
+            // Supprimer tous les guillemets en début et fin, même multiples
+            let cleaned = part.replace(/^"*|"*$/g, '');
+            // Remplacer les guillemets doubles internes par des guillemets simples
+            cleaned = cleaned.replace(/""/g, '"');
+            // Trim pour supprimer espaces
+            cleaned = cleaned.trim();
+            // Si le résultat commence encore par un guillemet, le supprimer
+            if (cleaned.startsWith('"')) {
+              cleaned = cleaned.substring(1);
+            }
+            if (cleaned.endsWith('"')) {
+              cleaned = cleaned.substring(0, cleaned.length - 1);
+            }
+            return cleaned;
+          }));
           
           logger.info('migration', `🔧 Méthode de split utilisée, ${parts.length} parties détectées`);
         } else {
@@ -142,6 +155,7 @@ export async function POST(request: NextRequest) {
         
         logger.info('migration', `📋 Headers détectés: ${headers.length} colonnes`);
         logger.info('migration', `🏷️ Headers principaux: ${headers.slice(0, 5).join(', ')}...`);
+        logger.info('migration', `🔍 Headers critiques: Number="${headers.find(h => h.includes('Number'))}", Name="${headers.find(h => h.includes('Name'))}", Context="${headers.find(h => h.includes('Context'))}"`);
         
         // Traiter les lignes de données
         const dataRows: any[] = [];
@@ -164,10 +178,19 @@ export async function POST(request: NextRequest) {
               values = fullRow.split(',');
             }
             
-            // Nettoyer les valeurs
-            values = values.map(val => 
-              val.replace(/^"*|"*$/g, '').replace(/""/g, '"').trim()
-            );
+            // Nettoyer les valeurs plus agressivement
+            values = values.map(val => {
+              let cleaned = val.replace(/^"*|"*$/g, '');
+              cleaned = cleaned.replace(/""/g, '"');
+              cleaned = cleaned.trim();
+              if (cleaned.startsWith('"')) {
+                cleaned = cleaned.substring(1);
+              }
+              if (cleaned.endsWith('"')) {
+                cleaned = cleaned.substring(0, cleaned.length - 1);
+              }
+              return cleaned;
+            });
             
             // Mapper aux headers
             for (let j = 0; j < Math.min(headers.length, values.length); j++) {
