@@ -48,7 +48,7 @@ export class EngStructureProcessor extends BaseProcessor {
     }
 
     // Vérification des colonnes obligatoires
-    const requiredColumns = ['Number', 'Structure Level', 'Version', 'State', 'Quantity'];
+    const requiredColumns = ['Number', 'Structure Level', 'Revision', 'State', 'Quantity'];
     if (data.length > 0) {
       const firstRow = data[0];
       const missingColumns = requiredColumns.filter(col => !(col in firstRow));
@@ -186,7 +186,7 @@ export class EngStructureProcessor extends BaseProcessor {
       const SUB_PART_NO = this.cleanValue(row["Number"]);
 
       // Colonne D : SUB PART REV
-      const SUB_PART_REV = this.computeSubPartRev(PART_NO, this.cleanValue(row["Version"]), this.cleanValue(row["State"]));
+      const SUB_PART_REV = this.computeSubPartRev(PART_NO, this.cleanValue(row["Revision"]), this.cleanValue(row["State"]));
 
       // Colonne E : QTY
       const QTY = this.cleanValue(row["Quantity"]);

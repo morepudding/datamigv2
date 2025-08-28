@@ -110,8 +110,36 @@ export class TechnicalSpecsProcessor extends BaseProcessor {
    */
   private async loadAttributeMapping(): Promise<void> {
     try {
+      // Chemin compatible Vercel et local
       const extractorsPath = path.join(process.cwd(), 'public', 'extractors', 'X_attributs.csv');
-      const attributeData = await readCSV(extractorsPath);
+      
+      logger.info(this.moduleName, `Loading attribute mapping from: ${extractorsPath}`);
+      
+      let attributeData: any[];
+      
+      try {
+        attributeData = await readCSV(extractorsPath);
+      } catch (error) {
+        // Fallback : mapping intégré si fichier introuvable
+        logger.warn(this.moduleName, 'X_attributs.csv not found, using embedded mapping');
+        attributeData = [
+          { PLM: 'Marque', IFS: 'BRAND', TYPE: 'A' },
+          { PLM: 'Matière', IFS: 'MATERIAL', TYPE: 'A' },
+          { PLM: 'Masse', IFS: 'WEIGHT', TYPE: 'N' },
+          { PLM: 'Thickness', IFS: 'PANEL THICKNESS', TYPE: 'N' },
+          { PLM: 'Largeur sens du fil', IFS: 'GRAIN DIR WIDTH', TYPE: 'N' },
+          { PLM: 'Longueur sens du fil', IFS: 'GRAIN DIR LGTH', TYPE: 'N' },
+          { PLM: 'Working length', IFS: 'OVERALL LENGTH', TYPE: 'N' },
+          { PLM: 'Surface', IFS: 'SURFACE', TYPE: 'N' },
+          { PLM: 'Edge banding length', IFS: 'EDGE LENGTH', TYPE: 'N' },
+          { PLM: 'Edge banding thickness', IFS: 'EDGE THICKN', TYPE: 'N' },
+          { PLM: 'Edge banding wood type', IFS: 'EDGE MATERIAL', TYPE: 'A' },
+          { PLM: 'Edge banding width', IFS: 'EDGE WIDTH', TYPE: 'N' },
+          { PLM: 'Largeur', IFS: 'WIDTH VNR SHEET', TYPE: 'N' },
+          { PLM: 'Longueur', IFS: 'LNGH VENEER SHT', TYPE: 'N' },
+          { PLM: 'Profile', IFS: 'PROFILE CODE', TYPE: 'A' }
+        ];
+      }
       
       this.attributeMapping = {};
       

@@ -337,8 +337,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Génération des chemins de fichiers pour l'archive
-    const filePaths = processingResults.map(result => result.outputPath);
-    const archiveResult: ArchiveResult = await createZipArchive(filePaths, projectCode);
+    const filePaths = processingResults
+      .filter(result => result.success && result.outputPath) // Seulement les fichiers réussis
+      .map(result => result.outputPath);
+    
+    const archivePath = path.join(outputDir, `migration_${projectCode}_${Date.now()}.zip`);
+    const archiveResult: ArchiveResult = await createZipArchive(filePaths, archivePath);
     
     // 7. Calcul des métriques finales
     const totalProcessingTime = Date.now() - startTime;
