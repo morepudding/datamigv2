@@ -42,16 +42,20 @@ export async function POST(request: NextRequest) {
 
     logger.info('migration', `📄 Fichier reçu: ${file.name} (${Math.round(file.size / 1024)} KB)`);
 
-    // 2. Sauvegarde temporaire du fichier
+    // 2. Sauvegarde temporaire du fichier (compatible Vercel)
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
     
-    // Créer le dossier tmp s'il n'existe pas
-    const tmpDir = path.join(process.cwd(), 'tmp');
-    try {
-      await mkdir(tmpDir, { recursive: true });
-    } catch (error) {
-      // Le dossier existe déjà
+    // Utiliser /tmp sur Vercel (seul répertoire writable)
+    const tmpDir = process.env.VERCEL ? '/tmp' : path.join(process.cwd(), 'tmp');
+    
+    // Créer le dossier tmp s'il n'existe pas (local uniquement)
+    if (!process.env.VERCEL) {
+      try {
+        await mkdir(tmpDir, { recursive: true });
+      } catch (error) {
+        // Le dossier existe déjà
+      }
     }
     
     const tempFilePath = path.join(tmpDir, `upload_${Date.now()}_${file.name}`);
@@ -117,13 +121,15 @@ export async function POST(request: NextRequest) {
 
     // 5. Traitement des modules en séquence
     const processingResults: ProcessingResult[] = [];
-    const outputDir = path.join(process.cwd(), 'output');
+    const outputDir = process.env.VERCEL ? '/tmp' : path.join(process.cwd(), 'output');
     
-    // Créer le dossier output s'il n'existe pas
-    try {
-      await mkdir(outputDir, { recursive: true });
-    } catch (error) {
-      // Le dossier existe déjà
+    // Créer le dossier output s'il n'existe pas (local uniquement)
+    if (!process.env.VERCEL) {
+      try {
+        await mkdir(outputDir, { recursive: true });
+      } catch (error) {
+        // Le dossier existe déjà
+      }
     }
 
     // Configuration des modules dans l'ordre de dépendance OBLIGATOIRE
