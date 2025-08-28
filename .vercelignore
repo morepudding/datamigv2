@@ -1,0 +1,9 @@
+# Vercel ignore
+/tests
+/tmp
+/output
+*.test.*
+coverage
+*.backup
+*.bak
+.cache
