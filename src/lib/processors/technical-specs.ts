@@ -165,7 +165,9 @@ export class TechnicalSpecsProcessor extends BaseProcessor {
    */
   private async loadMasterPartData(): Promise<void> {
     try {
-      const masterPartPath = path.join(process.cwd(), 'output', 'master_part.csv');
+      // Chemin compatible Vercel et local
+      const outputDir = process.env.VERCEL ? '/tmp' : path.join(process.cwd(), 'output');
+      const masterPartPath = path.join(outputDir, 'master_part.csv');
       this.masterPartData = await readCSV(masterPartPath);
       
       if (this.masterPartData.length === 0) {

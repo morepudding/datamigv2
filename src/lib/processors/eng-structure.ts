@@ -94,7 +94,9 @@ export class EngStructureProcessor extends BaseProcessor {
    */
   private async loadMasterPartAllData(): Promise<void> {
     try {
-      const masterPartAllPath = path.join(process.cwd(), 'output', 'master_part_all.csv');
+      // Chemin compatible Vercel et local
+      const outputDir = process.env.VERCEL ? '/tmp' : path.join(process.cwd(), 'output');
+      const masterPartAllPath = path.join(outputDir, 'master_part_all.csv');
       this.masterPartAllData = await readCSV(masterPartAllPath);
       
       if (this.masterPartAllData.length === 0) {
