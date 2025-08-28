@@ -109,45 +109,45 @@ export default function ResultsDownload({
   const handleArchiveDownload = async () => {
     if (!archiveResult) return;
     
-    // Tentative 1: téléchargement classique via fichier
+    setDownloadingFile(`Import_IFS_${projectCode}.zip`);
+    
+    // Utilisation directe de l'API archive (plus fiable sur Vercel)
+    console.log('Création d\'archive à la demande...');
     try {
-      await handleDownload(
-        `/api/migration/download?type=archive&path=${encodeURIComponent(archiveResult.archivePath)}`,
-        `Import_IFS_${projectCode}.zip`
-      );
-    } catch (error) {
-      console.warn('Téléchargement classique échoué, tentative alternative...');
-      
-      // Tentative 2: création d'archive à la demande
-      try {
-        const filePaths = processingResults
-          .filter(r => r.success && r.outputPath)
-          .map(r => r.outputPath);
-          
-        const response = await fetch('/api/migration/archive', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ filePaths, projectCode })
-        });
+      const filePaths = processingResults
+        .filter(r => r.success && r.outputPath)
+        .map(r => r.outputPath);
         
-        if (response.ok) {
-          const blob = await response.blob();
-          const url = window.URL.createObjectURL(blob);
-          const link = document.createElement('a');
-          link.href = url;
-          link.download = `Import_IFS_${projectCode}.zip`;
-          document.body.appendChild(link);
-          link.click();
-          link.remove();
-          window.URL.revokeObjectURL(url);
-        } else {
-          throw new Error('Erreur de téléchargement alternatif');
-        }
-      } catch (altError) {
-        console.error('Toutes les tentatives de téléchargement ont échoué:', altError);
-        alert('Impossible de télécharger l\'archive. Veuillez réessayer.');
+      console.log(`Fichiers pour archive: ${filePaths.length} fichiers`);
+        
+      const response = await fetch('/api/migration/archive', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filePaths, projectCode })
+      });
+      
+      if (response.ok) {
+        console.log('Archive créée avec succès');
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `Import_IFS_${projectCode}.zip`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(url);
+        console.log('Téléchargement terminé');
+      } else {
+        const errorText = await response.text();
+        throw new Error(`Erreur HTTP ${response.status}: ${errorText}`);
       }
+    } catch (error) {
+      console.error('Erreur téléchargement archive:', error);
+      alert(`Impossible de télécharger l'archive: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
     }
+    
+    setDownloadingFile(null);
   };
 
   const handleFileDownload = async (fileInfo: FileDownloadInfo) => {
