@@ -74,14 +74,85 @@ export async function POST(request: NextRequest) {
       
       if (isCSV) {
         logger.info('migration', '📄 Lecture du fichier CSV');
-        workbook = xlsx.readFile(tempFilePath, { type: 'file' });
+        // Options spéciales pour CSV avec guillemets doubles imbriqués
+        workbook = xlsx.readFile(tempFilePath, { 
+          type: 'file',
+          // Options pour parser les CSV complexes
+          raw: false,
+          codepage: 65001 // UTF-8
+        });
       } else {
         logger.info('migration', '📊 Lecture du fichier Excel');
         workbook = xlsx.readFile(tempFilePath);
       }
       
       const sheetName = workbook.SheetNames[0];
-      inputData = xlsx.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: '' });
+      // Options spéciales pour sheet_to_json avec CSV complexe
+      const parseOptions = isCSV ? {
+        defval: '',
+        raw: false,
+        header: 1  // Utiliser les indices pour les headers complexes
+      } : {
+        defval: ''
+      };
+      
+      let rawData = xlsx.utils.sheet_to_json(workbook.Sheets[sheetName], parseOptions);
+      
+      // Post-traitement spécial pour les CSV avec guillemets doubles
+      if (isCSV && rawData.length > 0) {
+        logger.info('migration', '🔧 Post-traitement CSV avec guillemets doubles');
+        
+        // Première ligne = headers, les nettoyer
+        const rawHeaders = rawData[0] as any[];
+        const headers: string[] = [];
+        
+        // Parser la première ligne qui contient tous les headers concaténés
+        if (rawHeaders.length === 1 && typeof rawHeaders[0] === 'string') {
+          const fullHeader = rawHeaders[0];
+          // Séparer par virgules en tenant compte des guillemets
+          const parts = fullHeader.split(',""').map(part => 
+            part.replace(/^"*|"*$/g, '').replace(/""/g, '"')
+          );
+          headers.push(...parts);
+        } else {
+          // Headers déjà séparés
+          headers.push(...rawHeaders.map(h => String(h).replace(/^"*|"*$/g, '').replace(/""/g, '"')));
+        }
+        
+        logger.info('migration', `📋 Headers détectés: ${headers.length} colonnes`);
+        logger.info('migration', `🏷️ Headers principaux: ${headers.slice(0, 5).join(', ')}...`);
+        
+        // Traiter les lignes de données
+        const dataRows: any[] = [];
+        for (let i = 1; i < rawData.length; i++) {
+          const rawRow = rawData[i] as any[];
+          const rowData: any = {};
+          
+          if (rawRow.length === 1 && typeof rawRow[0] === 'string') {
+            // Ligne concaténée, la séparer
+            const fullRow = rawRow[0];
+            const values = fullRow.split(',""').map(val => 
+              val.replace(/^"*|"*$/g, '').replace(/""/g, '"')
+            );
+            
+            // Mapper aux headers
+            for (let j = 0; j < Math.min(headers.length, values.length); j++) {
+              rowData[headers[j]] = values[j] || '';
+            }
+          } else {
+            // Ligne déjà séparée
+            for (let j = 0; j < Math.min(headers.length, rawRow.length); j++) {
+              rowData[headers[j]] = String(rawRow[j] || '').replace(/^"*|"*$/g, '').replace(/""/g, '"');
+            }
+          }
+          
+          dataRows.push(rowData);
+        }
+        
+        inputData = dataRows;
+      } else {
+        inputData = rawData as InputRow[];
+      }
       
       logger.info('migration', `📊 Données lues: ${inputData.length} lignes, ${Object.keys(inputData[0] || {}).length} colonnes`);
       logger.info('migration', `📋 Type de fichier: ${isCSV ? 'CSV' : 'Excel'}`);
