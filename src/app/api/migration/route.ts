@@ -343,11 +343,35 @@ export async function POST(request: NextRequest) {
     
     logger.info('migration', `📦 Création archive avec ${filePaths.length} fichiers: ${filePaths.join(', ')}`);
     
-    const archivePath = path.join(outputDir, `migration_${projectCode}_${Date.now()}.zip`);
-    logger.info('migration', `🗂️ Chemin d'archive: ${archivePath}`);
+    let archiveResult: ArchiveResult;
     
-    const archiveResult: ArchiveResult = await createZipArchive(filePaths, archivePath);
-    logger.info('migration', `✅ Archive créée: ${archiveResult.success ? 'succès' : 'échec'} - ${archiveResult.archivePath}`);
+    if (filePaths.length > 0) {
+      const archivePath = path.join(outputDir, `migration_${projectCode}_${Date.now()}.zip`);
+      logger.info('migration', `🗂️ Chemin d'archive: ${archivePath}`);
+      
+      try {
+        archiveResult = await createZipArchive(filePaths, archivePath);
+        logger.info('migration', `✅ Archive créée: ${archiveResult.success ? 'succès' : 'échec'} - ${archiveResult.archivePath}`);
+      } catch (error) {
+        logger.error('migration', `❌ Erreur création archive: ${error}`);
+        archiveResult = {
+          success: false,
+          archivePath: '',
+          archiveSize: 0,
+          filesIncluded: [],
+          projectCode
+        };
+      }
+    } else {
+      logger.warn('migration', '⚠️ Aucun fichier pour l\'archive');
+      archiveResult = {
+        success: false,
+        archivePath: '',
+        archiveSize: 0,
+        filesIncluded: [],
+        projectCode
+      };
+    }
     
     // 7. Calcul des métriques finales
     const totalProcessingTime = Date.now() - startTime;
