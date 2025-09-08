@@ -259,15 +259,6 @@ export function validateAndCleanNumericValue(value: any): { isValid: boolean; cl
 /**
  * Groupe les erreurs et avertissements similaires pour un affichage optimisé
  */
-export function groupSimilarMessages(
-  errors: ValidationError[], 
-  warnings: ValidationWarning[]
-): { groupedErrors: GroupedMessage[], groupedWarnings: GroupedMessage[] } {
-  const groupedErrors = groupMessages(errors);
-  const groupedWarnings = groupMessages(warnings);
-  
-  return { groupedErrors, groupedWarnings };
-}
 
 interface GroupedMessage {
   type: string;
@@ -283,9 +274,11 @@ function groupMessages(messages: (ValidationError | ValidationWarning)[]): Group
   messages.forEach((msg) => {
     // Créer une clé unique basée sur le type et le message (sans numéro de ligne)
     let cleanMessage = msg.message;
-    // Nettoyer le message des parties variables (valeurs spécifiques)
-    cleanMessage = cleanMessage.replace(/ - got "[^"]*"/, ' - got "<valeur>"');
-    cleanMessage = cleanMessage.replace(/Ligne \d+/, '');
+    
+    // Nettoyer le message des parties variables (numéros de ligne et valeurs spécifiques)
+    cleanMessage = cleanMessage.replace(/Ligne \d+/g, '').trim();
+    cleanMessage = cleanMessage.replace(/ - got "[^"]*"/g, ' - got "<valeur>"');
+    cleanMessage = cleanMessage.replace(/\s+/g, ' ').trim(); // Normaliser les espaces
     
     const key = `${msg.type}:${cleanMessage}:${msg.columnName || 'no-column'}`;
     
@@ -308,6 +301,40 @@ function groupMessages(messages: (ValidationError | ValidationWarning)[]): Group
   
   // Trier par nombre d'occurrences (décroissant)
   return Array.from(groups.values()).sort((a, b) => b.count - a.count);
+}
+
+/**
+ * Groupe les messages similaires et retourne un résumé
+ */
+export function groupSimilarMessages(
+  errors: ValidationError[], 
+  warnings: ValidationWarning[]
+): { 
+  groupedErrors: GroupedMessage[], 
+  groupedWarnings: GroupedMessage[],
+  simplifiedErrors: Array<{type: string, message: string}>,
+  simplifiedWarnings: Array<{type: string, message: string}>
+} {
+  const groupedErrors = groupMessages(errors);
+  const groupedWarnings = groupMessages(warnings);
+
+  // Convertir en format simple pour l'API
+  const simplifiedErrors = groupedErrors.map(group => ({
+    type: 'error',
+    message: `[${group.type}] ${group.message}${group.count > 1 ? ` (${group.count} occurrences)` : ''}${group.columnName ? ` [${group.columnName}]` : ''}`
+  }));
+
+  const simplifiedWarnings = groupedWarnings.map(group => ({
+    type: 'warning',
+    message: `[${group.type}] ${group.message}${group.count > 1 ? ` (${group.count} occurrences)` : ''}${group.columnName ? ` [${group.columnName}]` : ''}`
+  }));
+
+  return {
+    groupedErrors,
+    groupedWarnings,
+    simplifiedErrors,
+    simplifiedWarnings
+  };
 }
 
 /**

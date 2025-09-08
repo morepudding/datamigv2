@@ -352,6 +352,22 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Ajouter les warnings/erreurs groupés au premier module réussi
+    if (processingResults.length > 0) {
+      const firstSuccessfulModule = processingResults.find(result => result.success);
+      if (firstSuccessfulModule) {
+        const { simplifiedWarnings, simplifiedErrors } = groupSimilarMessages(validationResult.errors, validationResult.warnings);
+        
+        if (simplifiedErrors.length > 0) {
+          firstSuccessfulModule.errors.push(...simplifiedErrors.map(err => err.message));
+        }
+        
+        if (simplifiedWarnings.length > 0) {
+          firstSuccessfulModule.warnings.push(...simplifiedWarnings.map(warn => warn.message));
+        }
+      }
+    }
+
     // Génération des chemins de fichiers pour l'archive
     const filePaths = processingResults
       .filter(result => result.success && result.outputPath) // Seulement les fichiers réussis

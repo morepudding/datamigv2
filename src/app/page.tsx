@@ -191,17 +191,34 @@ export default function HomePage() {
       setStatus('completed');
       setCurrentStep('');
 
+      // Réinitialiser tous les états d'étapes pour arrêter les animations
+      setProcessingSteps(prevSteps => 
+        prevSteps.map(step => ({
+          ...step,
+          status: step.status === 'processing' ? 'completed' : step.status
+        }))
+      );
+
       addLog('INFO', `Traitement terminé avec succès - Code projet: ${result.projectCode}`, 'system');
 
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
       setError(errorMessage);
       setStatus('error');
+      setCurrentStep('');
       
-      // Marquer l'étape courante comme erreur
+      // Marquer l'étape courante comme erreur ET arrêter toutes les animations
       if (currentStep) {
         updateStepStatus(currentStep, 'error');
       }
+      
+      // Arrêter toutes les animations en cours
+      setProcessingSteps(prevSteps => 
+        prevSteps.map(step => ({
+          ...step,
+          status: step.status === 'processing' ? 'error' : step.status
+        }))
+      );
       
       addLog('ERROR', `Erreur fatale: ${errorMessage}`, 'system');
     }
@@ -216,8 +233,8 @@ export default function HomePage() {
     setError('');
     setValidationWarnings([]);
     setProcessingSteps([]);
-    setLogs([]);
     setCurrentStep('');
+    setLogs([]);
     setProjectCode('XXXXX');
   };
 
@@ -332,46 +349,23 @@ export default function HomePage() {
 
           {/* Section de traitement */}
           {(status === 'processing' || status === 'completed' || status === 'error') && (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              {/* Colonne principale : Statut */}
-              <div className="lg:col-span-2 space-y-6">
-                <ProcessingStatusComponent
-                  status={status}
-                  currentStep={currentStep}
-                  metrics={metrics}
-                  steps={processingSteps}
-                  logs={logs}
-                  error={error}
-                />
-                
-                {/* Résultats de téléchargement */}
-                <ResultsDownload
-                  archiveResult={archiveResult}
-                  processingResults={processingResults}
-                  projectCode={projectCode}
-                  isVisible={status === 'completed'}
-                />
-              </div>
-
-              {/* Colonne latérale : Progression des étapes avec design amélioré */}
-              {status !== 'completed' && (
-                <div className="lg:col-span-1">
-                  <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-xl border border-slate-200/50 p-6 sticky top-6">
-                    <div className="flex items-center space-x-3 mb-4">
-                      <div className="flex items-center justify-center w-8 h-8 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg">
-                        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                      </div>
-                      <h3 className="text-lg font-semibold text-slate-900">Progression</h3>
-                    </div>
-                    <StepProgress
-                      steps={processingSteps}
-                      currentStepId={currentStep}
-                    />
-                  </div>
-                </div>
-              )}
+            <div className="space-y-6">
+              <ProcessingStatusComponent
+                status={status}
+                currentStep={currentStep}
+                metrics={metrics}
+                steps={processingSteps}
+                logs={logs}
+                error={error}
+              />
+              
+              {/* Résultats de téléchargement */}
+              <ResultsDownload
+                archiveResult={archiveResult}
+                processingResults={processingResults}
+                projectCode={projectCode}
+                isVisible={status === 'completed'}
+              />
             </div>
           )}
 

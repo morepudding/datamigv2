@@ -20,7 +20,7 @@ export default function StepProgress({ steps, currentStepId, className = '' }: S
       return (
         <XCircleIcon className="h-6 w-6 text-red-500" />
       );
-    } else if (step.status === 'processing' || isActive) {
+    } else if (step.status === 'processing' || (isActive && currentStepId)) {
       return (
         <div className="flex items-center justify-center w-6 h-6">
           <svg className="h-6 w-6 animate-spin text-blue-500" fill="none" viewBox="0 0 24 24">
