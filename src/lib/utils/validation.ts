@@ -257,39 +257,107 @@ export function validateAndCleanNumericValue(value: any): { isValid: boolean; cl
 }
 
 /**
- * Génère un rapport de validation détaillé
+ * Groupe les erreurs et avertissements similaires pour un affichage optimisé
  */
-export function generateValidationReport(validation: ValidationResult): string {
+export function groupSimilarMessages(
+  errors: ValidationError[], 
+  warnings: ValidationWarning[]
+): { groupedErrors: GroupedMessage[], groupedWarnings: GroupedMessage[] } {
+  const groupedErrors = groupMessages(errors);
+  const groupedWarnings = groupMessages(warnings);
+  
+  return { groupedErrors, groupedWarnings };
+}
+
+interface GroupedMessage {
+  type: string;
+  message: string;
+  count: number;
+  sampleRows: number[];
+  columnName?: string;
+}
+
+function groupMessages(messages: (ValidationError | ValidationWarning)[]): GroupedMessage[] {
+  const groups = new Map<string, GroupedMessage>();
+  
+  messages.forEach((msg) => {
+    // Créer une clé unique basée sur le type et le message (sans numéro de ligne)
+    let cleanMessage = msg.message;
+    // Nettoyer le message des parties variables (valeurs spécifiques)
+    cleanMessage = cleanMessage.replace(/ - got "[^"]*"/, ' - got "<valeur>"');
+    cleanMessage = cleanMessage.replace(/Ligne \d+/, '');
+    
+    const key = `${msg.type}:${cleanMessage}:${msg.columnName || 'no-column'}`;
+    
+    if (groups.has(key)) {
+      const group = groups.get(key)!;
+      group.count++;
+      if (msg.rowIndex !== undefined && group.sampleRows.length < 10) {
+        group.sampleRows.push(msg.rowIndex + 1); // +1 pour affichage humain
+      }
+    } else {
+      groups.set(key, {
+        type: msg.type,
+        message: cleanMessage,
+        count: 1,
+        sampleRows: msg.rowIndex !== undefined ? [msg.rowIndex + 1] : [],
+        columnName: msg.columnName
+      });
+    }
+  });
+  
+  // Trier par nombre d'occurrences (décroissant)
+  return Array.from(groups.values()).sort((a, b) => b.count - a.count);
+}
+
+/**
+ * Génère un rapport de validation optimisé avec groupement des messages
+ */
+export function generateOptimizedValidationReport(validation: ValidationResult): string {
   let report = `Validation Report\n`;
   report += `================\n\n`;
   report += `Status: ${validation.isValid ? 'VALID' : 'INVALID'}\n`;
   report += `Errors: ${validation.errors.length}\n`;
   report += `Warnings: ${validation.warnings.length}\n\n`;
 
-  if (validation.errors.length > 0) {
-    report += `ERRORS:\n`;
-    validation.errors.forEach((error, index) => {
-      report += `${index + 1}. [${error.type}] ${error.message}`;
-      if (error.rowIndex !== undefined) {
-        report += ` (Row: ${error.rowIndex + 1})`;
+  const { groupedErrors, groupedWarnings } = groupSimilarMessages(validation.errors, validation.warnings);
+
+  if (groupedErrors.length > 0) {
+    report += `ERRORS (${groupedErrors.length} types):\n`;
+    groupedErrors.forEach((group, index) => {
+      report += `${index + 1}. [${group.type}] ${group.message}`;
+      if (group.count > 1) {
+        report += ` (${group.count} occurrences)`;
       }
-      if (error.columnName) {
-        report += ` (Column: ${error.columnName})`;
+      if (group.columnName) {
+        report += ` [${group.columnName}]`;
+      }
+      if (group.sampleRows.length > 0) {
+        const sampleText = group.sampleRows.length < group.count 
+          ? `${group.sampleRows.slice(0, 5).join(', ')}...` 
+          : group.sampleRows.join(', ');
+        report += ` - Lignes: ${sampleText}`;
       }
       report += `\n`;
     });
     report += `\n`;
   }
 
-  if (validation.warnings.length > 0) {
-    report += `WARNINGS:\n`;
-    validation.warnings.forEach((warning, index) => {
-      report += `${index + 1}. [${warning.type}] ${warning.message}`;
-      if (warning.rowIndex !== undefined) {
-        report += ` (Row: ${warning.rowIndex + 1})`;
+  if (groupedWarnings.length > 0) {
+    report += `WARNINGS (${groupedWarnings.length} types):\n`;
+    groupedWarnings.forEach((group, index) => {
+      report += `${index + 1}. [${group.type}] ${group.message}`;
+      if (group.count > 1) {
+        report += ` (${group.count} occurrences)`;
       }
-      if (warning.columnName) {
-        report += ` (Column: ${warning.columnName})`;
+      if (group.columnName) {
+        report += ` [${group.columnName}]`;
+      }
+      if (group.sampleRows.length > 0) {
+        const sampleText = group.sampleRows.length < group.count 
+          ? `${group.sampleRows.slice(0, 5).join(', ')}...` 
+          : group.sampleRows.join(', ');
+        report += ` - Lignes: ${sampleText}`;
       }
       report += `\n`;
     });

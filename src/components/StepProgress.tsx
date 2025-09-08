@@ -11,7 +11,7 @@ interface StepProgressProps {
 }
 
 export default function StepProgress({ steps, currentStepId, className = '' }: StepProgressProps) {
-  const getStepIcon = (step: ProcessingStep, isActive: boolean) => {
+  const getStepIcon = (step: ProcessingStep, isActive: boolean, index: number) => {
     if (step.status === 'completed') {
       return (
         <CheckCircleIcon className="h-6 w-6 text-green-500" />
@@ -31,7 +31,9 @@ export default function StepProgress({ steps, currentStepId, className = '' }: S
       );
     } else {
       return (
-        <ClockIcon className="h-6 w-6 text-gray-400" />
+        <div className="flex items-center justify-center w-6 h-6 rounded-full border-2 border-gray-300 bg-white">
+          <span className="text-xs font-medium text-gray-500">{index + 1}</span>
+        </div>
       );
     }
   };
@@ -102,7 +104,7 @@ export default function StepProgress({ steps, currentStepId, className = '' }: S
               <div className={`flex items-start space-x-4 p-4 rounded-lg border ${stepColor}`}>
                 {/* Icône de statut */}
                 <div className="flex-shrink-0 mt-0.5">
-                  {getStepIcon(step, isActive)}
+                  {getStepIcon(step, isActive, index)}
                 </div>
                 
                 {/* Informations de l'étape */}
@@ -141,8 +143,25 @@ export default function StepProgress({ steps, currentStepId, className = '' }: S
                         )}
                       </div>
                       <div className="w-full bg-white bg-opacity-30 rounded-full h-1.5">
-                        <div className="bg-blue-600 h-1.5 rounded-full animate-pulse" style={{ width: '60%' }}></div>
+                        <div className="bg-blue-600 h-1.5 rounded-full" style={{ 
+                          width: step.processedRows ? `${Math.min((step.processedRows / 10000) * 100, 90)}%` : '20%',
+                          transition: 'width 0.5s ease-in-out'
+                        }}></div>
                       </div>
+                    </div>
+                  )}
+
+                  {/* Message de complétion */}
+                  {step.status === 'completed' && step.processedRows !== undefined && (
+                    <div className="mt-2 text-xs text-green-600">
+                      ✅ Terminé - {formatNumber(step.processedRows)} lignes traitées
+                    </div>
+                  )}
+
+                  {/* Message d'erreur */}
+                  {step.status === 'error' && (
+                    <div className="mt-2 text-xs text-red-600">
+                      ❌ Erreur lors du traitement
                     </div>
                   )}
                 </div>

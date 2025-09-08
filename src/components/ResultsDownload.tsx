@@ -7,7 +7,9 @@ import {
   ArchiveBoxIcon,
   CheckCircleIcon,
   ClockIcon,
-  ExclamationTriangleIcon
+  ExclamationTriangleIcon,
+  ChevronDownIcon,
+  ChevronRightIcon
 } from '@heroicons/react/24/outline';
 import type { ArchiveResult, ProcessingResult } from '@/lib/types';
 
@@ -27,6 +29,47 @@ interface FileDownloadInfo {
   path: string;
 }
 
+interface GroupedMessage {
+  message: string;
+  count: number;
+  sampleRows: number[];
+  type: string;
+}
+
+// Fonction pour grouper les messages similaires
+function groupSimilarMessages(messages: string[]): GroupedMessage[] {
+  const groups = new Map<string, GroupedMessage>();
+  
+  messages.forEach((msg) => {
+    // Extraire le numéro de ligne du message
+    const lineMatch = msg.match(/Ligne (\d+)$/);
+    const lineNumber = lineMatch ? parseInt(lineMatch[1]) : 0;
+    
+    // Nettoyer le message des parties variables
+    let cleanMessage = msg
+      .replace(/Ligne \d+$/, '') // Supprimer "Ligne XXX" à la fin
+      .replace(/ - got "[^"]*"/, ' - valeur non conforme') // Remplacer valeurs spécifiques
+      .trim();
+    
+    if (groups.has(cleanMessage)) {
+      const group = groups.get(cleanMessage)!;
+      group.count++;
+      if (lineNumber > 0 && group.sampleRows.length < 10) {
+        group.sampleRows.push(lineNumber);
+      }
+    } else {
+      groups.set(cleanMessage, {
+        message: cleanMessage,
+        count: 1,
+        sampleRows: lineNumber > 0 ? [lineNumber] : [],
+        type: 'warning'
+      });
+    }
+  });
+  
+  return Array.from(groups.values()).sort((a, b) => b.count - a.count);
+}
+
 export default function ResultsDownload({
   archiveResult,
   processingResults = [],
@@ -34,6 +77,15 @@ export default function ResultsDownload({
   isVisible = false
 }: ResultsDownloadProps) {
   const [downloadingFile, setDownloadingFile] = useState<string | null>(null);
+  const [expandedIssues, setExpandedIssues] = useState<string[]>([]);
+
+  const toggleIssueExpansion = (issueKey: string) => {
+    setExpandedIssues(prev => 
+      prev.includes(issueKey) 
+        ? prev.filter(key => key !== issueKey)
+        : [...prev, issueKey]
+    );
+  };
 
   const formatFileSize = (bytes: number): string => {
     if (bytes === 0) return '0 Bytes';
@@ -316,46 +368,159 @@ export default function ResultsDownload({
         </div>
       </div>
 
-      {/* Détails des erreurs et avertissements */}
+      {/* Détails des erreurs et avertissements - Version optimisée */}
       {(totalErrors > 0 || totalWarnings > 0) && (
         <div className="bg-white rounded-lg border p-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Détails des problèmes</h3>
+          <h3 className="text-lg font-medium text-gray-900 mb-4">
+            Analyse des problèmes détectés
+          </h3>
+          
           <div className="space-y-4">
             {processingResults.map((result, index) => {
               const hasIssues = result.errors.length > 0 || result.warnings.length > 0;
               if (!hasIssues) return null;
 
+              const groupedWarnings = groupSimilarMessages(result.warnings);
+              const groupedErrors = groupSimilarMessages(result.errors);
+              const moduleKey = result.module;
+              const isExpanded = expandedIssues.includes(moduleKey);
+
               return (
-                <div key={result.module} className="border rounded-lg p-4">
-                  <h4 className="font-medium text-gray-900 mb-3">
-                    {files.find(f => f.path === result.outputPath)?.displayName || result.module}
-                  </h4>
-                  
-                  {result.errors.length > 0 && (
-                    <div className="mb-3">
-                      <p className="text-sm font-medium text-red-800 mb-2">Erreurs :</p>
-                      <ul className="list-disc list-inside space-y-1 text-sm text-red-700">
-                        {result.errors.map((error, errorIndex) => (
-                          <li key={errorIndex}>{error}</li>
-                        ))}
-                      </ul>
+                <div key={result.module} className="border rounded-lg">
+                  <div 
+                    className="p-4 cursor-pointer hover:bg-gray-50"
+                    onClick={() => toggleIssueExpansion(moduleKey)}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <div className="flex items-center">
+                          {isExpanded ? (
+                            <ChevronDownIcon className="h-5 w-5 text-gray-400" />
+                          ) : (
+                            <ChevronRightIcon className="h-5 w-5 text-gray-400" />
+                          )}
+                        </div>
+                        <h4 className="font-medium text-gray-900">
+                          {files.find(f => f.path === result.outputPath)?.displayName || result.module}
+                        </h4>
+                        <div className="flex items-center space-x-2">
+                          {result.errors.length > 0 && (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                              {result.errors.length} erreur{result.errors.length > 1 ? 's' : ''}
+                            </span>
+                          )}
+                          {result.warnings.length > 0 && (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                              {result.warnings.length} avertissement{result.warnings.length > 1 ? 's' : ''}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      
+                      <div className="text-sm text-gray-500">
+                        {formatNumber(result.rowsOutput)} lignes générées
+                      </div>
                     </div>
-                  )}
-                  
-                  {result.warnings.length > 0 && (
-                    <div>
-                      <p className="text-sm font-medium text-yellow-800 mb-2">Avertissements :</p>
-                      <ul className="list-disc list-inside space-y-1 text-sm text-yellow-700">
-                        {result.warnings.map((warning, warningIndex) => (
-                          <li key={warningIndex}>{warning}</li>
-                        ))}
-                      </ul>
+                  </div>
+
+                  {isExpanded && (
+                    <div className="px-4 pb-4 border-t border-gray-100">
+                      {groupedErrors.length > 0 && (
+                        <div className="mb-4 mt-4">
+                          <div className="flex items-center mb-3">
+                            <ExclamationTriangleIcon className="h-5 w-5 text-red-500 mr-2" />
+                            <h5 className="text-sm font-medium text-red-800">
+                              Erreurs ({groupedErrors.length} type{groupedErrors.length > 1 ? 's' : ''})
+                            </h5>
+                          </div>
+                          <div className="space-y-2">
+                            {groupedErrors.map((group, groupIndex) => (
+                              <div key={groupIndex} className="bg-red-50 rounded-md p-3">
+                                <p className="text-sm text-red-700 font-medium">
+                                  {group.message}
+                                </p>
+                                {group.count > 1 && (
+                                  <p className="text-xs text-red-600 mt-1">
+                                    <strong>{group.count} occurrences</strong>
+                                    {group.sampleRows.length > 0 && (
+                                      <span> - Exemples lignes: {group.sampleRows.slice(0, 5).join(', ')}</span>
+                                    )}
+                                  </p>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {groupedWarnings.length > 0 && (
+                        <div className="mt-4">
+                          <div className="flex items-center mb-3">
+                            <ExclamationTriangleIcon className="h-5 w-5 text-yellow-500 mr-2" />
+                            <h5 className="text-sm font-medium text-yellow-800">
+                              Avertissements ({groupedWarnings.length} type{groupedWarnings.length > 1 ? 's' : ''})
+                            </h5>
+                          </div>
+                          <div className="space-y-2">
+                            {groupedWarnings.map((group, groupIndex) => (
+                              <div key={groupIndex} className="bg-yellow-50 rounded-md p-3">
+                                <p className="text-sm text-yellow-700 font-medium">
+                                  {group.message}
+                                </p>
+                                {group.count > 1 && (
+                                  <p className="text-xs text-yellow-600 mt-1">
+                                    <strong>{group.count} occurrences</strong>
+                                    {group.sampleRows.length > 0 && (
+                                      <span> - Exemples lignes: {group.sampleRows.slice(0, 5).join(', ')}</span>
+                                    )}
+                                  </p>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+
+                          {/* Conseil contextuel pour les problèmes State */}
+                          {groupedWarnings.some(w => w.message.includes('State field should be')) && (
+                            <div className="mt-3 p-3 bg-blue-50 rounded-md border-l-4 border-blue-400">
+                              <div className="flex">
+                                <div className="ml-3">
+                                  <p className="text-sm text-blue-700">
+                                    <strong>💡 Conseil :</strong> Les valeurs "Obsolete" dans le champ State peuvent être converties automatiquement en "Released" 
+                                    si nécessaire pour l'import IFS. Cette conversion peut être configurée dans les règles de mapping.
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
               );
             })}
           </div>
+
+          {/* Résumé global des problèmes */}
+          {totalWarnings > 0 && (
+            <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+              <div className="flex items-start">
+                <ExclamationTriangleIcon className="h-5 w-5 text-amber-500 mt-0.5 mr-3" />
+                <div>
+                  <h4 className="text-sm font-medium text-amber-800 mb-1">
+                    Résumé de la qualité des données
+                  </h4>
+                  <p className="text-sm text-amber-700">
+                    {totalWarnings} avertissement{totalWarnings > 1 ? 's' : ''} détecté{totalWarnings > 1 ? 's' : ''} sur {formatNumber(totalRows)} lignes traitées 
+                    ({((totalWarnings / totalRows) * 100).toFixed(1)}% du dataset).
+                  </p>
+                  <p className="text-xs text-amber-600 mt-2">
+                    Ces avertissements n'empêchent pas l'import mais peuvent nécessiter une validation métier avant le déploiement en production.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
