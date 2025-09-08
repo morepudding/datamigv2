@@ -233,18 +233,22 @@ export async function POST(request: NextRequest) {
     if (!validationResult.isValid) {
       logger.error('migration', `❌ Validation échouée: ${validationResult.errors.length} erreurs`);
       await cleanupTempFile(tempFilePath);
+      
+      // Grouper les erreurs et warnings pour l'affichage
+      const { simplifiedWarnings: groupedValidationWarnings, simplifiedErrors: groupedValidationErrors } = groupSimilarMessages(validationResult.errors, validationResult.warnings);
+      
       return NextResponse.json({
         error: 'Données invalides',
-        validationErrors: validationResult.errors,
-        validationWarnings: validationResult.warnings
+        validationErrors: groupedValidationErrors.map(err => err.message),
+        validationWarnings: groupedValidationWarnings.map(warn => warn.message)
       }, { status: 400 });
     }
 
     // Grouper les warnings similaires pour un affichage optimisé
-    const { groupedWarnings } = groupSimilarMessages(validationResult.errors, validationResult.warnings);
+    const { simplifiedWarnings, simplifiedErrors } = groupSimilarMessages(validationResult.errors, validationResult.warnings);
     
     if (validationResult.warnings.length > 0) {
-      logger.warn('migration', `⚠️ ${validationResult.warnings.length} avertissement(s) de validation détecté(s) - ${groupedWarnings.length} types différents`);
+      logger.warn('migration', `⚠️ ${validationResult.warnings.length} avertissement(s) de validation détecté(s) - ${simplifiedWarnings.length} types différents`);
     }
 
     // 5. Traitement des modules en séquence
@@ -315,16 +319,12 @@ export async function POST(request: NextRequest) {
         processingResults.push(result);
         
         // Ajouter les warnings de validation au premier module pour affichage
-        if (processingResults.length === 1 && groupedWarnings.length > 0) {
+        if (processingResults.length === 1 && simplifiedWarnings.length > 0) {
           result.warnings = [
             ...result.warnings,
-            ...groupedWarnings.map(group => 
-              group.count > 1 
-                ? `${group.message} (${group.count} occurrences) - Exemples lignes: ${group.sampleRows.slice(0, 5).join(', ')}`
-                : group.message
-            )
+            ...simplifiedWarnings.map(warn => warn.message)
           ];
-          logger.info('migration', `📊 ${groupedWarnings.length} type(s) d'avertissements de validation ajoutés au premier module`);
+          logger.info('migration', `📊 ${simplifiedWarnings.length} type(s) d'avertissements de validation ajoutés au premier module`);
         }
         
         if (result.success) {
@@ -463,7 +463,7 @@ export async function POST(request: NextRequest) {
       processingResults,
       archiveResult,
       metrics,
-      validationWarnings: validationResult.warnings
+      validationWarnings: simplifiedWarnings.map(warn => ({ message: warn.message, type: warn.type }))
     });
 
   } catch (error) {
