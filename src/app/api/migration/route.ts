@@ -9,7 +9,7 @@ import type {
   ProcessingMetrics,
   ValidationResult 
 } from '@/lib/types/migration';
-import { validateInputData } from '@/lib/utils/validation';
+import { validateInputData, groupSimilarMessages, generateOptimizedValidationReport } from '@/lib/utils/validation';
 import { createZipArchive } from '@/lib/utils/archive';
 import logger from '@/lib/utils/logger';
 
@@ -228,7 +228,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 4. Validation des données
+    // 4. Validation des données avec groupement des messages
     const validationResult: ValidationResult = validateInputData(inputData);
     if (!validationResult.isValid) {
       logger.error('migration', `❌ Validation échouée: ${validationResult.errors.length} erreurs`);
@@ -240,8 +240,11 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
+    // Grouper les warnings similaires pour un affichage optimisé
+    const { groupedWarnings } = groupSimilarMessages(validationResult.errors, validationResult.warnings);
+    
     if (validationResult.warnings.length > 0) {
-      logger.warn('migration', `⚠️ ${validationResult.warnings.length} avertissement(s) de validation détecté(s)`);
+      logger.warn('migration', `⚠️ ${validationResult.warnings.length} avertissement(s) de validation détecté(s) - ${groupedWarnings.length} types différents`);
     }
 
     // 5. Traitement des modules en séquence
@@ -310,6 +313,19 @@ export async function POST(request: NextRequest) {
         const result = await module.processor.process(inputData, outputPath);
         
         processingResults.push(result);
+        
+        // Ajouter les warnings de validation au premier module pour affichage
+        if (processingResults.length === 1 && groupedWarnings.length > 0) {
+          result.warnings = [
+            ...result.warnings,
+            ...groupedWarnings.map(group => 
+              group.count > 1 
+                ? `${group.message} (${group.count} occurrences) - Exemples lignes: ${group.sampleRows.slice(0, 5).join(', ')}`
+                : group.message
+            )
+          ];
+          logger.info('migration', `📊 ${groupedWarnings.length} type(s) d'avertissements de validation ajoutés au premier module`);
+        }
         
         if (result.success) {
           logger.info('migration', `✅ Module ${module.displayName} terminé: ${result.rowsOutput} lignes en ${result.processingTime}ms`);
