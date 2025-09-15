@@ -123,6 +123,7 @@ export class TechnicalSpecsProcessor extends BaseProcessor {
         // Fallback : mapping intégré si fichier introuvable
         logger.warn(this.moduleName, 'X_attributs.csv not found, using embedded mapping');
         attributeData = [
+          // Attributs de base existants et fonctionnels
           { PLM: 'Marque', IFS: 'BRAND', TYPE: 'A' },
           { PLM: 'Matière', IFS: 'MATERIAL', TYPE: 'A' },
           { PLM: 'Masse', IFS: 'WEIGHT', TYPE: 'N' },
@@ -138,26 +139,30 @@ export class TechnicalSpecsProcessor extends BaseProcessor {
           { PLM: 'Largeur', IFS: 'WIDTH VNR SHEET', TYPE: 'N' },
           { PLM: 'Longueur', IFS: 'LNGH VENEER SHT', TYPE: 'N' },
           { PLM: 'Profile', IFS: 'PROFILE CODE', TYPE: 'A' },
-          // Nouveaux attributs manquants ajoutés
-          { PLM: 'Machining Code', IFS: 'MACHINING CODE', TYPE: 'A' },
-          { PLM: 'Right Angle', IFS: 'RIGHT ANGLE', TYPE: 'N' },
-          { PLM: 'Left Angle', IFS: 'LEFT ANGLE', TYPE: 'N' },
-          { PLM: 'Right Oblique', IFS: 'RIGHT OBLIQUE', TYPE: 'N' },
-          { PLM: 'Left Oblique', IFS: 'LEFT OBLIQUE', TYPE: 'N' },
-          { PLM: 'Matrl Int Vn F', IFS: 'MATRL INT VN F', TYPE: 'A' },
-          { PLM: 'Matrl Out Vn F', IFS: 'MATRL OUT VN F', TYPE: 'A' },
-          { PLM: 'Veneer Area', IFS: 'VENEER AREA', TYPE: 'N' },
-          { PLM: 'Overall Thickn', IFS: 'OVERALL THICKN', TYPE: 'N' },
-          { PLM: 'Overall Width', IFS: 'OVERALL WIDTH', TYPE: 'N' },
-          { PLM: 'Paint Aera', IFS: 'PAINT AERA', TYPE: 'N' },
-          { PLM: 'Veneer Material', IFS: 'VENEER MATERIAL', TYPE: 'A' },
-          { PLM: 'Mold Plate', IFS: 'MOLD PLATE', TYPE: 'A' },
-          { PLM: 'Mold Position', IFS: 'MOLD POSITION', TYPE: 'A' },
-          { PLM: 'Mold Number', IFS: 'MOLD NUMBER', TYPE: 'A' },
-          { PLM: 'Finger Joint', IFS: 'FINGER JOINT', TYPE: 'A' },
-          { PLM: 'Section', IFS: 'SECTION', TYPE: 'A' },
-          { PLM: 'Machining Box', IFS: 'MACHINING BOX', TYPE: 'A' },
-          { PLM: 'Wood Grain', IFS: 'WOOD GRAIN', TYPE: 'A' }
+          { PLM: 'Area', IFS: 'AREA', TYPE: 'N' },
+          
+          // NOUVEAUX ATTRIBUTS AVEC CORRESPONDANCES CORRECTES DU CSV
+          { PLM: 'Code usinage', IFS: 'MACHINING CODE', TYPE: 'A' },
+          { PLM: 'Angle de découpe droite', IFS: 'RIGHT ANGLE', TYPE: 'N' },
+          { PLM: 'Angle de découpe gauche', IFS: 'LEFT ANGLE', TYPE: 'N' },
+          { PLM: 'Angle de découpe oblique droite', IFS: 'RIGHT OBLIQUE', TYPE: 'N' },
+          { PLM: 'Angle de découpe oblique gauche', IFS: 'LEFT OBLIQUE', TYPE: 'N' },
+          { PLM: 'Finition face intérieure', IFS: 'MATRL INT VN F', TYPE: 'A' },
+          { PLM: 'Finition face extérieure', IFS: 'MATRL OUT VN F', TYPE: 'A' },
+          { PLM: 'Side veneer surface', IFS: 'VENEER AREA', TYPE: 'N' },
+          { PLM: 'Side veneer thickness', IFS: 'OVERALL THICKN', TYPE: 'N' },
+          { PLM: 'Side veneer wood type', IFS: 'VENEER MATERIAL', TYPE: 'A' },
+          { PLM: 'Matrice', IFS: 'MOLD PLATE', TYPE: 'A' },
+          { PLM: 'Position matrice', IFS: 'MOLD POSITION', TYPE: 'A' },
+          { PLM: 'Numéro de moule', IFS: 'MOLD NUMBER', TYPE: 'A' },
+          { PLM: 'Position moule', IFS: 'MOLD POSITION', TYPE: 'A' },
+          { PLM: 'Aboutage', IFS: 'FINGER JOINT', TYPE: 'A' },
+          { PLM: 'Semelle', IFS: 'SECTION', TYPE: 'A' },
+          
+          // ATTRIBUTS SUPPLÉMENTAIRES BASÉS SUR L'ANALYSE DES COLONNES CSV
+          // Note: Certains peuvent être vides dans les données mais on les ajoute au mapping
+          { PLM: 'Edge banding wood type', IFS: 'WOOD GRAIN', TYPE: 'A' }, // Approximation pour WOOD GRAIN
+          { PLM: 'Area', IFS: 'PAINT AERA', TYPE: 'N' } // Si différent de VENEER AREA
         ];
       }
       
