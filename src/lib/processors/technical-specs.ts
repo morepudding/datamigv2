@@ -137,7 +137,27 @@ export class TechnicalSpecsProcessor extends BaseProcessor {
           { PLM: 'Edge banding width', IFS: 'EDGE WIDTH', TYPE: 'N' },
           { PLM: 'Largeur', IFS: 'WIDTH VNR SHEET', TYPE: 'N' },
           { PLM: 'Longueur', IFS: 'LNGH VENEER SHT', TYPE: 'N' },
-          { PLM: 'Profile', IFS: 'PROFILE CODE', TYPE: 'A' }
+          { PLM: 'Profile', IFS: 'PROFILE CODE', TYPE: 'A' },
+          // Nouveaux attributs manquants ajoutés
+          { PLM: 'Machining Code', IFS: 'MACHINING CODE', TYPE: 'A' },
+          { PLM: 'Right Angle', IFS: 'RIGHT ANGLE', TYPE: 'N' },
+          { PLM: 'Left Angle', IFS: 'LEFT ANGLE', TYPE: 'N' },
+          { PLM: 'Right Oblique', IFS: 'RIGHT OBLIQUE', TYPE: 'N' },
+          { PLM: 'Left Oblique', IFS: 'LEFT OBLIQUE', TYPE: 'N' },
+          { PLM: 'Matrl Int Vn F', IFS: 'MATRL INT VN F', TYPE: 'A' },
+          { PLM: 'Matrl Out Vn F', IFS: 'MATRL OUT VN F', TYPE: 'A' },
+          { PLM: 'Veneer Area', IFS: 'VENEER AREA', TYPE: 'N' },
+          { PLM: 'Overall Thickn', IFS: 'OVERALL THICKN', TYPE: 'N' },
+          { PLM: 'Overall Width', IFS: 'OVERALL WIDTH', TYPE: 'N' },
+          { PLM: 'Paint Aera', IFS: 'PAINT AERA', TYPE: 'N' },
+          { PLM: 'Veneer Material', IFS: 'VENEER MATERIAL', TYPE: 'A' },
+          { PLM: 'Mold Plate', IFS: 'MOLD PLATE', TYPE: 'A' },
+          { PLM: 'Mold Position', IFS: 'MOLD POSITION', TYPE: 'A' },
+          { PLM: 'Mold Number', IFS: 'MOLD NUMBER', TYPE: 'A' },
+          { PLM: 'Finger Joint', IFS: 'FINGER JOINT', TYPE: 'A' },
+          { PLM: 'Section', IFS: 'SECTION', TYPE: 'A' },
+          { PLM: 'Machining Box', IFS: 'MACHINING BOX', TYPE: 'A' },
+          { PLM: 'Wood Grain', IFS: 'WOOD GRAIN', TYPE: 'A' }
         ];
       }
       
@@ -167,7 +187,7 @@ export class TechnicalSpecsProcessor extends BaseProcessor {
     try {
       // Chemin compatible Vercel et local
       const outputDir = process.env.VERCEL ? '/tmp' : path.join(process.cwd(), 'output');
-      const masterPartPath = path.join(outputDir, 'master_part.csv');
+      const masterPartPath = path.join(outputDir, '01_L_PARTS_MD_004_CNB_PR4LC_WOOD.csv');
       this.masterPartData = await readCSV(masterPartPath);
       
       if (this.masterPartData.length === 0) {
@@ -225,6 +245,17 @@ export class TechnicalSpecsProcessor extends BaseProcessor {
           }
         }
       });
+      
+      // Génération automatique de l'attribut GENERIC CODE pour chaque pièce AN29
+      const classification = this.cleanValue(row.Classification);
+      if (classification && classification.includes("AN29")) {
+        results.push({
+          'MASTER_PART': partNumber,
+          'ATTRIBUT': 'GENERIC CODE',
+          'VALEUR': partNumber, // GENERIC CODE = [Number]
+          'TYPE': 'A' // Type Alphanumeric
+        });
+      }
     });
 
     return results;

@@ -31,7 +31,7 @@ interface MasterPartRow {
   'FIRST_INVENTORY_SITE': string;
   'CONFIG_FAMILY_ID': string;
   'ALLOW_CHANGES_TO_CREATED_DOP_STRUCTURE': string;
-  'ALLOW_AS_NOT_CONSUMED': boolean;
+  'ALLOW_AS_NOT_CONSUMED': string;
   'VOLUME_NET': number;
   'WEIGHT_NET': number;
 }
@@ -90,15 +90,19 @@ export class MasterPartProcessor extends BaseProcessor {
     filteredData = this.filterByClassification(filteredData);
     logger.info(this.moduleName, `After Classification filter: ${filteredData.length} rows`);
 
-    // ÉTAPE 3: Exclusion des pièces fantômes spécifiques
+    // ÉTAPE 3: Exclusion des pièces obsolètes
+    filteredData = this.filterObsoleteParts(filteredData);
+    logger.info(this.moduleName, `After Obsolete filter: ${filteredData.length} rows`);
+
+    // ÉTAPE 4: Exclusion des pièces fantômes spécifiques
     filteredData = this.filterPhantomParts(filteredData);
     logger.info(this.moduleName, `After Phantom filter: ${filteredData.length} rows`);
 
-    // ÉTAPE 4: Exclusion des révisions A en cours de travail
+    // ÉTAPE 5: Exclusion des révisions A en cours de travail
     filteredData = this.filterRevisionA(filteredData);
     logger.info(this.moduleName, `After Revision A filter: ${filteredData.length} rows`);
 
-    // ÉTAPE 5: Déduplication sur colonne "Number"
+    // ÉTAPE 6: Déduplication sur colonne "Number"
     filteredData = this.deduplicateByKey(filteredData, row => this.cleanValue(row.Number));
     logger.info(this.moduleName, `After deduplication: ${filteredData.length} rows`);
 
@@ -153,7 +157,27 @@ export class MasterPartProcessor extends BaseProcessor {
   }
 
   /**
-   * ÉTAPE 4: Exclusion des révisions A en cours de travail
+   * ÉTAPE 3: Exclusion des pièces obsolètes
+   * Si [State] = Obsolète → Ne pas injecter la pièce dans la nomenclature
+   */
+  private filterObsoleteParts(data: InputRow[]): InputRow[] {
+    const filtered = data.filter(row => {
+      const state = this.cleanValue(row.State).toLowerCase();
+      
+      // Si State = "Obsolète" → EXCLURE
+      if (state === "obsolète" || state === "obsolete") {
+        return false;
+      }
+      
+      return true;
+    });
+    
+    logger.info(this.moduleName, `Obsolete filter: ${data.length} → ${filtered.length} rows`);
+    return filtered;
+  }
+
+  /**
+   * ÉTAPE 5: Exclusion des révisions A en cours de travail
    */
   private filterRevisionA(data: InputRow[]): InputRow[] {
     const filtered = data.filter(row => {
@@ -173,6 +197,45 @@ export class MasterPartProcessor extends BaseProcessor {
   }
 
   /**
+   * Calcul de la révision selon les nouvelles règles
+   * - Si [State] = Under Review ET [Revision] <> A → [Revision] = N-1 (exemple B devient A)
+   * - Si [State] = In Work ET [Revision] <> A → [Revision] = N-1 (exemple B devient A)
+   * - Sinon révision reste vide
+   */
+  private computeRevision(revision: string, state: string): string {
+    const cleanState = state.toLowerCase();
+    const cleanRevision = revision.toUpperCase();
+    
+    // Si State = "Under Review" ET Revision <> "A" → Revision = N-1
+    if (cleanState === "under review" && cleanRevision !== "A") {
+      return this.decrementRevision(cleanRevision);
+    }
+    
+    // Si State = "In Work" ET Revision <> "A" → Revision = N-1  
+    if (cleanState === "in work" && cleanRevision !== "A") {
+      return this.decrementRevision(cleanRevision);
+    }
+    
+    // Dans tous les autres cas, révision vide (comme spécifié précédemment)
+    return '';
+  }
+
+  /**
+   * Décrémente une révision (B -> A, C -> B, etc.)
+   */
+  private decrementRevision(revision: string): string {
+    if (!revision || revision.length === 0) return '';
+    
+    const char = revision.charAt(0);
+    if (char >= 'B' && char <= 'Z') {
+      return String.fromCharCode(char.charCodeAt(0) - 1);
+    }
+    
+    // Si c'est déjà 'A' ou autre chose, retourner 'A'
+    return 'A';
+  }
+
+  /**
    * Transformation d'une ligne vers le format de sortie
    */
   private transformRow(row: InputRow): MasterPartRow {
@@ -188,14 +251,14 @@ export class MasterPartProcessor extends BaseProcessor {
       'SERIAL_TRACKING_CODE_DB': 'NOT SERIAL TRACKING', // Toujours fixe
       'PROVIDE_DB': 'PHANTOM', // Toujours fixe
       'PART_REV': this.computeRevision(this.cleanValue(row.Revision), this.cleanValue(row.State)),
-      'ASSORTMENT_ID': 'Classification', // Toujours fixe
+      'ASSORTMENT_ID': 'CLASSIFICATION', // Toujours fixe
       'ASSORTMENT_NODE': this.extractAssortmentNode(classification),
       'CODE_GTIN': '', // Toujours vide
       'PART_MAIN_GROUP': this.extractProjectCode(context),
       'FIRST_INVENTORY_SITE': 'FR008', // Toujours fixe
       'CONFIG_FAMILY_ID': classification.includes("AN29-02-00") ? "ANY-XX-WOODP-0" : "",
       'ALLOW_CHANGES_TO_CREATED_DOP_STRUCTURE': '', // Toujours vide
-      'ALLOW_AS_NOT_CONSUMED': false, // Toujours fixe
+      'ALLOW_AS_NOT_CONSUMED': 'FALSE', // Toujours fixe
       'VOLUME_NET': 0, // Toujours fixe
       'WEIGHT_NET': 0 // Toujours fixe
     };

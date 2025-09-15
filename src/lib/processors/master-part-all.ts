@@ -30,9 +30,10 @@ interface MasterPartAllRow {
   'FIRST_INVENTORY_SITE': string;
   'CONFIG_FAMILY_ID': string;
   'ALLOW_CHANGES_TO_CREATED_DOP_STRUCTURE': string;
-  'ALLOW_AS_NOT_CONSUMED': boolean;
+  'ALLOW_AS_NOT_CONSUMED': string;
   'VOLUME_NET': number;
   'WEIGHT_NET': number;
+  'SOURCE': string; // NOUVELLE COLONNE CRITIQUE pour Eng Part Structure
 }
 
 export class MasterPartAllProcessor extends BaseProcessor {
@@ -170,16 +171,17 @@ export class MasterPartAllProcessor extends BaseProcessor {
       'SERIAL_TRACKING_CODE_DB': 'NOT SERIAL TRACKING', // Toujours fixe
       'PROVIDE_DB': 'PHANTOM', // Toujours fixe
       'PART_REV': this.computeRevision(this.cleanValue(row.Revision), this.cleanValue(row.State)),
-      'ASSORTMENT_ID': 'Classification', // Toujours fixe
+      'ASSORTMENT_ID': 'CLASSIFICATION', // Toujours fixe
       'ASSORTMENT_NODE': this.extractAssortmentNode(classification),
       'CODE_GTIN': '', // Toujours vide
       'PART_MAIN_GROUP': this.extractProjectCode(context),
       'FIRST_INVENTORY_SITE': 'FR008', // Toujours fixe
       'CONFIG_FAMILY_ID': classification.includes("AN29-02-00") ? "ANY-XX-WOODP-0" : "",
       'ALLOW_CHANGES_TO_CREATED_DOP_STRUCTURE': '', // Toujours vide
-      'ALLOW_AS_NOT_CONSUMED': false, // Toujours fixe
+      'ALLOW_AS_NOT_CONSUMED': 'FALSE', // Toujours fixe
       'VOLUME_NET': 0, // Toujours fixe
-      'WEIGHT_NET': 0 // Toujours fixe
+      'WEIGHT_NET': 0, // Toujours fixe
+      'SOURCE': this.cleanValue(row.Source) // NOUVELLE COLONNE CRITIQUE
     };
   }
 
@@ -205,7 +207,8 @@ export class MasterPartAllProcessor extends BaseProcessor {
       { id: 'ALLOW_CHANGES_TO_CREATED_DOP_STRUCTURE' as keyof MasterPartAllRow, title: 'ALLOW_CHANGES_TO_CREATED_DOP_STRUCTURE' },
       { id: 'ALLOW_AS_NOT_CONSUMED' as keyof MasterPartAllRow, title: 'ALLOW_AS_NOT_CONSUMED' },
       { id: 'VOLUME_NET' as keyof MasterPartAllRow, title: 'VOLUME_NET' },
-      { id: 'WEIGHT_NET' as keyof MasterPartAllRow, title: 'WEIGHT_NET' }
+      { id: 'WEIGHT_NET' as keyof MasterPartAllRow, title: 'WEIGHT_NET' },
+      { id: 'SOURCE' as keyof MasterPartAllRow, title: 'SOURCE' } // NOUVELLE COLONNE
     ];
 
     await generateCSV(data, headers, outputPath);

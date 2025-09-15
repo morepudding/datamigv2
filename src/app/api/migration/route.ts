@@ -270,37 +270,43 @@ export async function POST(request: NextRequest) {
         name: 'master-part', 
         displayName: 'Master Part (Référentiel principal)',
         processor: new MasterPartProcessor(),
-        outputFileName: 'master_part.csv'
+        outputFileName: '01_L_PARTS_MD_004_CNB_PR4LC_WOOD.csv',
+        includeInArchive: true // Inclus dans l'archive finale
       },
       { 
         name: 'master-part-all', 
-        displayName: 'Master Part ALL (Référentiel complet)',
+        displayName: 'Master Part ALL (Référentiel complet avec Buy)',
         processor: new MasterPartAllProcessor(),
-        outputFileName: 'master_part_all.csv'
-      },
-      { 
-        name: 'technical-specs', 
-        displayName: 'Technical Spec Values (Spécifications techniques)',
-        processor: new TechnicalSpecsProcessor(),
-        outputFileName: 'technical_spec_values.csv'
+        outputFileName: 'master_part_all.csv',
+        includeInArchive: false // EXCLU de l'archive - utilisé seulement en interne
       },
       { 
         name: 'eng-structure', 
         displayName: 'Eng Part Structure (Structure nomenclature)',
         processor: new EngStructureProcessor(),
-        outputFileName: 'eng_part_structure.csv'
+        outputFileName: '02_L_ENG_PART_STRUCT_PR4LC_WOOD.csv',
+        includeInArchive: true // Inclus dans l'archive finale
+      },
+      { 
+        name: 'technical-specs', 
+        displayName: 'Technical Spec Values (Spécifications techniques)',
+        processor: new TechnicalSpecsProcessor(),
+        outputFileName: '03_L_TECHNICAL_CLASS_VALUES_PR4LC_WOOD.csv',
+        includeInArchive: true // Inclus dans l'archive finale
       },
       { 
         name: 'inventory-part', 
         displayName: 'Inventory Part (Gestion stocks)',
         processor: new InventoryPartProcessor(),
-        outputFileName: 'inventory_part.csv'
+        outputFileName: '04_L_INVENTORY_PART_PR4LC_WOOD.csv',
+        includeInArchive: true // Inclus dans l'archive finale
       },
       { 
         name: 'inventory-plan', 
         displayName: 'Inventory Part Plan (Planification stocks)',
         processor: new InventoryPartPlanProcessor(),
-        outputFileName: 'inventory_part_plan.csv'
+        outputFileName: '05_L_INVENTORY_PART_PLAN_PR4LC_WOOD.csv',
+        includeInArchive: true // Inclus dans l'archive finale
       }
     ];
 
@@ -368,9 +374,12 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Génération des chemins de fichiers pour l'archive
+    // Génération des chemins de fichiers pour l'archive (EXCLU master_part_all.csv)
     const filePaths = processingResults
-      .filter(result => result.success && result.outputPath) // Seulement les fichiers réussis
+      .filter((result, index) => {
+        const module = modules[index];
+        return result.success && result.outputPath && module.includeInArchive;
+      })
       .map(result => result.outputPath);
     
     logger.info('migration', `📦 Création archive avec ${filePaths.length} fichiers: ${filePaths.join(', ')}`);

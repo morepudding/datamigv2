@@ -178,7 +178,7 @@ export class InventoryPartProcessor extends BaseProcessor {
       'UNIT_MEAS': 'PCS', // Toujours fixe
       'CATCH_UNIT': 'PCS', // Toujours fixe
       'PART_PRODUCT_CODE': 'BND00', // Toujours fixe
-      'TYPE_CODE_DB': '4', // Toujours fixe
+      'TYPE_CODE_DB': '1', // Toujours fixe
       'SAFETY_CODE': '', // Toujours vide
       'INVENTORY_VALUATION_METHOD': 'AV', // Toujours fixe
       'INVENTORY_PART_COST_LEVEL': 'COST PER CONFIGURATION', // Toujours fixe

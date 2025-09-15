@@ -3,8 +3,8 @@
  * Définit les liens parent-enfant dans les nomenclatures d'ingénierie
  * 
  * Prérequis obligatoire:
- * - Le fichier master_part_all.csv DOIT exister dans le dossier output
- * - Lecture et indexation de master_part_all.csv par PART_NO
+ * - Le fichier master_part.csv DOIT exister dans le dossier output
+ * - Lecture et indexation de master_part.csv par PART_NO
  * - Algorithme complexe AX, AY, AZ pour calculer les relations parent-enfant
  */
 
@@ -74,7 +74,7 @@ export class EngStructureProcessor extends BaseProcessor {
   protected async processData(data: InputRow[]): Promise<EngStructureRow[]> {
     logger.info(this.moduleName, `Starting processing with ${data.length} input rows`);
 
-    // Étape 1: Chargement et indexation du fichier master_part_all.csv
+    // Étape 1: Chargement et indexation du fichier master_part.csv
     await this.loadMasterPartAllData();
     logger.info(this.moduleName, `Loaded ${this.masterPartAllData.length} master part ALL records`);
 
@@ -90,7 +90,7 @@ export class EngStructureProcessor extends BaseProcessor {
   }
 
   /**
-   * Chargement et indexation du fichier master_part_all.csv
+   * Chargement et indexation du fichier master_part.csv
    */
   private async loadMasterPartAllData(): Promise<void> {
     try {
@@ -162,33 +162,59 @@ export class EngStructureProcessor extends BaseProcessor {
   }
 
   /**
-   * Traitement des lignes de structure selon les règles métier
+   * Traitement des lignes de structure selon les règles métier avec logging détaillé
    */
   private processStructureRows(data: Array<InputRow & { AX: string; AY: string; AZ: number }>): EngStructureRow[] {
     const results: EngStructureRow[] = [];
+    let excludedReasons: { [key: string]: number } = {
+      'PART_NO_EMPTY': 0,
+      'PART_NO_NOT_IN_MASTER': 0,
+      'SOURCE_IS_BUY': 0
+    };
 
-    data.forEach(row => {
+    logger.info(this.moduleName, `📊 Processing ${data.length} structure rows`);
+
+    data.forEach((row, index) => {
       // Colonne A : PART NO
       const PART_NO = (row.AZ === 1) ? row.AX : "";
       
-      // Règles d'exclusion supplémentaires
-      if (!PART_NO) return; // Exclure si PART_NO est vide
+      // RÈGLE 1: Exclure si PART_NO est vide
+      if (!PART_NO) {
+        excludedReasons['PART_NO_EMPTY']++;
+        return;
+      }
       
       const masterPartData = this.masterIndex.get(PART_NO);
-      if (!masterPartData) return; // Excluer si PART_NO n'existe pas dans Master Part ALL
       
-      // Exclure si Source = "buy" dans Master Part ALL (on récupère la Source depuis les données originales)
-      // Note: Master Part ALL ne contient pas Source, on doit faire une approximation
-      // Si la pièce est dans Master Part ALL mais pas dans Master Part filtré, c'est probablement un "Buy"
+      // RÈGLE 2: Excluer si PART_NO n'existe pas dans Master Part ALL
+      if (!masterPartData) {
+        excludedReasons['PART_NO_NOT_IN_MASTER']++;
+        logger.debug(this.moduleName, `❌ PART_NO ${PART_NO} not found in master part index`);
+        return;
+      }
+
+      // RÈGLE 3: Filtrage des pièces "Buy" - utilisation de la colonne Source du master_part_all.csv
+      // Maintenant que master_part_all.csv contient la colonne Source, on peut l'utiliser directement
+      if (masterPartData.SOURCE && this.cleanValue(masterPartData.SOURCE).toLowerCase().trim() === "buy") {
+        excludedReasons['SOURCE_IS_BUY']++;
+        logger.debug(this.moduleName, `❌ PART_NO ${PART_NO} excluded - Source is Buy`);
+        return;
+      }
       
-      // Colonne B : PART REV
-      const PART_REV = masterPartData["PART_REV"] || "";
+      // Log pour traçabilité des pièces importantes
+      if (PART_NO === "W034679Z") {
+        logger.info(this.moduleName, `🔍 Processing critical part W034679Z - Row ${index}, AZ=${row.AZ}, AX=${row.AX}, AY=${row.AY}`);
+        logger.info(this.moduleName, `🔍 W034679Z found in master: ${!!masterPartData}, Source: ${masterPartData?.SOURCE || 'NOT_FOUND'}`);
+      }
+
+      // Colonne B : PART REV (doit être vide selon les specs)
+      const PART_REV = "";
 
       // Colonne C : SUB PART NO  
       const SUB_PART_NO = this.cleanValue(row["Number"]);
 
-      // Colonne D : SUB PART REV
-      const SUB_PART_REV = this.computeSubPartRev(PART_NO, this.cleanValue(row["Revision"]), this.cleanValue(row["State"]));
+      // Colonne D : SUB PART REV (doit être vide selon les specs)
+      const SUB_PART_REV = "";
 
       // Colonne E : QTY
       const QTY = this.cleanValue(row["Quantity"]);
@@ -208,10 +234,29 @@ export class EngStructureProcessor extends BaseProcessor {
         'STR COMMENT': STR_COMMENT,
         'SORT NO': SORT_NO
       });
+
+      // Log spécial pour W034679Z
+      if (PART_NO === "W034679Z") {
+        logger.info(this.moduleName, `✅ W034679Z added to results - SUB_PART_NO: ${SUB_PART_NO}, QTY: ${QTY}`);
+      }
     });
+
+    // Rapport détaillé des exclusions
+    logger.info(this.moduleName, `📊 Exclusion Summary:`);
+    logger.info(this.moduleName, `   - PART_NO empty: ${excludedReasons['PART_NO_EMPTY']} rows`);
+    logger.info(this.moduleName, `   - PART_NO not in master: ${excludedReasons['PART_NO_NOT_IN_MASTER']} rows`);
+    logger.info(this.moduleName, `   - Source is Buy: ${excludedReasons['SOURCE_IS_BUY']} rows`);
+    logger.info(this.moduleName, `   - Total excluded: ${data.length - results.length} rows`);
+    logger.info(this.moduleName, `   - Final results: ${results.length} rows`);
+
+    // Comptage spécial pour W034679Z
+    const w034679ZCount = results.filter(r => r['PART NO'] === 'W034679Z').length;
+    logger.info(this.moduleName, `🔍 W034679Z final count: ${w034679ZCount} rows`);
 
     return results;
   }
+
+
 
   /**
    * Calcul de SUB PART REV avec mapping inverse
