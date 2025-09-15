@@ -243,11 +243,17 @@ export class EngStructureProcessor extends BaseProcessor {
 
     // Rapport détaillé des exclusions
     logger.info(this.moduleName, `📊 Exclusion Summary:`);
-    logger.info(this.moduleName, `   - PART_NO empty: ${excludedReasons['PART_NO_EMPTY']} rows`);
+    logger.info(this.moduleName, `   - PART_NO empty: ${excludedReasons['PART_NO_EMPTY']} rows (normal avec algorithme AZ)`);
     logger.info(this.moduleName, `   - PART_NO not in master: ${excludedReasons['PART_NO_NOT_IN_MASTER']} rows`);
     logger.info(this.moduleName, `   - Source is Buy: ${excludedReasons['SOURCE_IS_BUY']} rows`);
     logger.info(this.moduleName, `   - Total excluded: ${data.length - results.length} rows`);
     logger.info(this.moduleName, `   - Final results: ${results.length} rows`);
+    
+    // Message informatif sur le comportement normal
+    const emptyPartNoCount = results.filter(r => !r['PART NO'] || r['PART NO'].trim() === '').length;
+    if (emptyPartNoCount > 0) {
+      logger.info(this.moduleName, `✅ Algorithme AX/AY/AZ: ${emptyPartNoCount} lignes avec PART NO vide par design (AZ ≠ 1)`);
+    }
 
     // Comptage spécial pour W034679Z
     const w034679ZCount = results.filter(r => r['PART NO'] === 'W034679Z').length;
@@ -345,15 +351,20 @@ export class EngStructureProcessor extends BaseProcessor {
       });
     }
 
-    // Vérification de la cohérence parent-enfant
-    const parentParts = new Set(data.map(row => row['PART NO']));
-    const childParts = new Set(data.map(row => row['SUB PART NO']));
+    // Vérification de la cohérence parent-enfant (adaptée à l'algorithme AX/AY/AZ)
+    const parentParts = new Set(data.map(row => row['PART NO']).filter(part => part && part.trim() !== ''));
+    const childParts = new Set(data.map(row => row['SUB PART NO']).filter(part => part && part.trim() !== ''));
     
-    const orphanChildren = Array.from(childParts).filter(child => !parentParts.has(child));
-    if (orphanChildren.length > 0) {
+    // Compter les lignes avec PART NO vide (par design de l'algorithme AZ === 1)
+    const emptyParentRows = data.filter(row => !row['PART NO'] || row['PART NO'].trim() === '').length;
+    
+    // Seuls les vrais orphelins (enfants qui n'ont aucun parent dans la structure) sont problématiques
+    const trueOrphanChildren = Array.from(childParts).filter(child => !parentParts.has(child));
+    
+    if (trueOrphanChildren.length > 0) {
       warnings.push({
         type: 'DATA_QUALITY',
-        message: `${orphanChildren.length} child parts without parent in structure`
+        message: `${trueOrphanChildren.length} child parts without any parent reference in structure (excluding ${emptyParentRows} rows with empty PART NO by design)`
       });
     }
 

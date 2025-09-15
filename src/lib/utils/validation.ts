@@ -53,16 +53,19 @@ export function validateInputData(data: InputRow[]): ValidationResult {
     }
 
     // Validation du champ State
-    const validStates = ['Released', 'In Work', 'Under Review', 'released', 'in work', 'under review'];
+    const validStates = ['Released', 'In Work', 'Under Review', 'Obsolete', 'released', 'in work', 'under review', 'obsolete'];
     const stateValue = row.State ? row.State.toString().trim() : '';
     if (stateValue && !validStates.includes(stateValue)) {
       warnings.push({
         type: 'DATA_QUALITY',
-        message: `State field should be "Released", "In Work", or "Under Review" - got "${stateValue}"`,
+        message: `State field should be "Released", "In Work", "Under Review", or "Obsolete" - got "${stateValue}"`,
         rowIndex: index,
         columnName: 'State',
         value: row.State
       });
+    } else if (stateValue && stateValue.toLowerCase() === 'obsolete') {
+      // Info: Les pièces obsolètes seront automatiquement filtrées du traitement
+      // Pas de warning car c'est le comportement attendu
     }
 
     // Validation du champ Version (doit être une lettre)
