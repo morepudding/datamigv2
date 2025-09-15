@@ -149,7 +149,9 @@ async function testCompleteWorkflow() {
       
       // Traiter les lignes de données
       const dataRows = [];
-      for (let i = 1; i < Math.min(rawData.length, 101); i++) { // Test sur 100 lignes
+      // Parse avec le pattern détecté (ou par défaut)
+      const data = [];
+      for (let i = 1; i < rawData.length; i++) { // Traitement complet
         const rawRow = rawData[i];
         const rowData = {};
         

@@ -358,15 +358,20 @@ export class EngStructureProcessor extends BaseProcessor {
     // Compter les lignes avec PART NO vide (par design de l'algorithme AZ === 1)
     const emptyParentRows = data.filter(row => !row['PART NO'] || row['PART NO'].trim() === '').length;
     
-    // Seuls les vrais orphelins (enfants qui n'ont aucun parent dans la structure) sont problématiques
-    const trueOrphanChildren = Array.from(childParts).filter(child => !parentParts.has(child));
+    // Les pièces enfants qui ne sont jamais parents sont des PIÈCES FEUILLES - c'est normal !
+    const leafParts = Array.from(childParts).filter(child => !parentParts.has(child));
     
-    if (trueOrphanChildren.length > 0) {
-      warnings.push({
-        type: 'DATA_QUALITY',
-        message: `${trueOrphanChildren.length} child parts without any parent reference in structure (excluding ${emptyParentRows} rows with empty PART NO by design)`
-      });
-    }
+    // Dans une nomenclature hiérarchique, avoir des pièces feuilles est attendu et normal
+    // Ces pièces représentent les composants élémentaires (visserie, matériaux, etc.)
+    // On ne génère plus d'avertissement pour cela
+    logger.info(this.moduleName, `✅ Structure nomenclature normale:`);
+    logger.info(this.moduleName, `   - ${parentParts.size} pièces parents (assemblages)`);
+    logger.info(this.moduleName, `   - ${leafParts.length} pièces feuilles (composants élémentaires)`);
+    logger.info(this.moduleName, `   - ${Array.from(childParts).filter(child => parentParts.has(child)).length} pièces intermédiaires (sous-assemblages)`);
+    
+    // NOTE: Les "child parts without parent" ne constituent plus un avertissement car :
+    // 1. C'est le comportement normal d'une nomenclature (pièces feuilles)
+    // 2. Tous les enfants ont bien un parent dans leurs lignes respectives (colonne PART NO)
 
     return {
       isValid: errors.length === 0,
