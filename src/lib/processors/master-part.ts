@@ -198,6 +198,7 @@ export class MasterPartProcessor extends BaseProcessor {
 
   /**
    * Calcul de la révision selon les nouvelles règles
+   * - Si [State] = Released → [Revision] reste telle quelle
    * - Si [State] = Under Review ET [Revision] <> A → [Revision] = N-1 (exemple B devient A)
    * - Si [State] = In Work ET [Revision] <> A → [Revision] = N-1 (exemple B devient A)
    * - Sinon révision reste vide
@@ -205,6 +206,11 @@ export class MasterPartProcessor extends BaseProcessor {
   private computeRevision(revision: string, state: string): string {
     const cleanState = state.toLowerCase();
     const cleanRevision = revision.toUpperCase();
+    
+    // Si State = "Released" → Retourner la révision telle quelle
+    if (cleanState === "released") {
+      return cleanRevision;
+    }
     
     // Si State = "Under Review" ET Revision <> "A" → Revision = N-1
     if (cleanState === "under review" && cleanRevision !== "A") {
@@ -216,7 +222,7 @@ export class MasterPartProcessor extends BaseProcessor {
       return this.decrementRevision(cleanRevision);
     }
     
-    // Dans tous les autres cas, révision vide (comme spécifié précédemment)
+    // Dans tous les autres cas, révision vide
     return '';
   }
 

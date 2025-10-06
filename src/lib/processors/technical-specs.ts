@@ -187,12 +187,26 @@ export class TechnicalSpecsProcessor extends BaseProcessor {
 
   /**
    * Chargement du fichier master_part.csv depuis le dossier output
+   * Cherche automatiquement le fichier 01_L_PARTS_MD_004_CNB_*_WOOD.csv
    */
   private async loadMasterPartData(): Promise<void> {
     try {
       // Chemin compatible Vercel et local
       const outputDir = process.env.VERCEL ? '/tmp' : path.join(process.cwd(), 'output');
-      const masterPartPath = path.join(outputDir, '01_L_PARTS_MD_004_CNB_PR4LC_WOOD.csv');
+      const fs = require('fs');
+      
+      // Chercher le fichier master part avec le pattern
+      const files = fs.readdirSync(outputDir);
+      const masterPartFile = files.find((file: string) => 
+        file.startsWith('01_L_PARTS_MD_004_CNB_') && file.endsWith('_WOOD.csv')
+      );
+      
+      if (!masterPartFile) {
+        throw new Error('Master Part file not found. Expected pattern: 01_L_PARTS_MD_004_CNB_*_WOOD.csv');
+      }
+      
+      const masterPartPath = path.join(outputDir, masterPartFile);
+      logger.info(this.moduleName, `Loading master part data from: ${masterPartFile}`);
       this.masterPartData = await readCSV(masterPartPath);
       
       if (this.masterPartData.length === 0) {
@@ -219,6 +233,46 @@ export class TechnicalSpecsProcessor extends BaseProcessor {
   }
 
   /**
+   * Normalise un nom de colonne pour gérer les problèmes d'encodage
+   * Convertit les caractères mal encodés vers leur équivalent correct
+   */
+  private normalizeColumnName(columnName: string): string {
+    return columnName
+      .replace(/Mati�re/gi, 'Matière')
+      .replace(/Num�ro/gi, 'Numéro')
+      .replace(/ext�rieure/gi, 'extérieure')
+      .replace(/int�rieure/gi, 'intérieure')
+      .replace(/d�coupe/gi, 'découpe')
+      .replace(/Epaisseur/gi, 'Épaisseur')
+      .replace(/�/g, 'é'); // Fallback pour tous les autres é mal encodés
+  }
+
+  /**
+   * Trouve la valeur d'un attribut dans la ligne en gérant les problèmes d'encodage
+   */
+  private findAttributeValue(row: InputRow, attribute: string): any {
+    // Essayer d'abord avec le nom exact
+    if (row[attribute] !== undefined) {
+      return row[attribute];
+    }
+    
+    // Essayer de trouver une clé similaire avec problème d'encodage
+    const normalizedAttribute = this.normalizeColumnName(attribute);
+    if (normalizedAttribute !== attribute && row[normalizedAttribute] !== undefined) {
+      return row[normalizedAttribute];
+    }
+    
+    // Chercher une clé qui correspond après normalisation
+    for (const key of Object.keys(row)) {
+      if (this.normalizeColumnName(key) === attribute) {
+        return row[key];
+      }
+    }
+    
+    return undefined;
+  }
+
+  /**
    * Génération des valeurs d'attributs avec nettoyage
    */
   private generateAttributeValues(data: InputRow[]): TechnicalSpecRow[] {
@@ -229,9 +283,12 @@ export class TechnicalSpecsProcessor extends BaseProcessor {
       
       // Pour chaque attribut mappé
       Object.keys(this.attributeMapping).forEach(attribute => {
-        if (row[attribute] !== undefined && row[attribute] !== null) {
+        // Utiliser la fonction de recherche flexible pour gérer les problèmes d'encodage
+        const value = this.findAttributeValue(row, attribute);
+        
+        if (value !== undefined && value !== null) {
           // 1) Conversion en chaîne
-          let cleanValue = String(row[attribute]);
+          let cleanValue = String(value);
 
           // 2) Suppression des unités physiques
           cleanValue = cleanValue.replace(/m²|m|deg|kg/g, "").trim();

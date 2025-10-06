@@ -141,13 +141,34 @@ export async function POST(request: NextRequest) {
             if (cleaned.endsWith('"')) {
               cleaned = cleaned.substring(0, cleaned.length - 1);
             }
+            // Normaliser les caractères mal encodés
+            cleaned = cleaned
+              .replace(/Mati�re/gi, 'Matière')
+              .replace(/Num�ro/gi, 'Numéro')
+              .replace(/ext�rieure/gi, 'extérieure')
+              .replace(/int�rieure/gi, 'intérieure')
+              .replace(/d�coupe/gi, 'découpe')
+              .replace(/Epaisseur/gi, 'Épaisseur')
+              .replace(/�/g, 'é'); // Fallback pour tous les autres é mal encodés
             return cleaned;
           }));
           
           logger.info('migration', `🔧 Méthode de split utilisée, ${parts.length} parties détectées`);
         } else {
           // Headers déjà séparés
-          headers.push(...rawHeaders.map(h => String(h).replace(/^"*|"*$/g, '').replace(/""/g, '"')));
+          headers.push(...rawHeaders.map(h => {
+            let cleaned = String(h).replace(/^"*|"*$/g, '').replace(/""/g, '"');
+            // Normaliser les caractères mal encodés
+            cleaned = cleaned
+              .replace(/Mati�re/gi, 'Matière')
+              .replace(/Num�ro/gi, 'Numéro')
+              .replace(/ext�rieure/gi, 'extérieure')
+              .replace(/int�rieure/gi, 'intérieure')
+              .replace(/d�coupe/gi, 'découpe')
+              .replace(/Epaisseur/gi, 'Épaisseur')
+              .replace(/�/g, 'é'); // Fallback pour tous les autres é mal encodés
+            return cleaned;
+          }));
         }
         
         logger.info('migration', `📋 Headers détectés: ${headers.length} colonnes`);
@@ -270,7 +291,7 @@ export async function POST(request: NextRequest) {
         name: 'master-part', 
         displayName: 'Master Part (Référentiel principal)',
         processor: new MasterPartProcessor(),
-        outputFileName: '01_L_PARTS_MD_004_CNB_PR4LC_WOOD.csv',
+        outputFileName: `01_L_PARTS_MD_004_CNB_${projectCode}_WOOD.csv`,
         includeInArchive: true // Inclus dans l'archive finale
       },
       { 
@@ -284,28 +305,28 @@ export async function POST(request: NextRequest) {
         name: 'eng-structure', 
         displayName: 'Eng Part Structure (Structure nomenclature)',
         processor: new EngStructureProcessor(),
-        outputFileName: '02_L_ENG_PART_STRUCT_PR4LC_WOOD.csv',
+        outputFileName: `02_L_ENG_PART_STRUCT_${projectCode}_WOOD.csv`,
         includeInArchive: true // Inclus dans l'archive finale
       },
       { 
         name: 'technical-specs', 
         displayName: 'Technical Spec Values (Spécifications techniques)',
         processor: new TechnicalSpecsProcessor(),
-        outputFileName: '03_L_TECHNICAL_CLASS_VALUES_PR4LC_WOOD.csv',
+        outputFileName: `03_L_TECHNICAL_CLASS_VALUES_${projectCode}_WOOD.csv`,
         includeInArchive: true // Inclus dans l'archive finale
       },
       { 
         name: 'inventory-part', 
         displayName: 'Inventory Part (Gestion stocks)',
         processor: new InventoryPartProcessor(),
-        outputFileName: '04_L_INVENTORY_PART_PR4LC_WOOD.csv',
+        outputFileName: `04_L_INVENTORY_PART_${projectCode}_WOOD.csv`,
         includeInArchive: true // Inclus dans l'archive finale
       },
       { 
         name: 'inventory-plan', 
         displayName: 'Inventory Part Plan (Planification stocks)',
         processor: new InventoryPartPlanProcessor(),
-        outputFileName: '05_L_INVENTORY_PART_PLAN_PR4LC_WOOD.csv',
+        outputFileName: `05_L_INVENTORY_PART_PLAN_${projectCode}_WOOD.csv`,
         includeInArchive: true // Inclus dans l'archive finale
       }
     ];
