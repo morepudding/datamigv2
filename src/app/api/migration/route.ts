@@ -127,20 +127,46 @@ export async function POST(request: NextRequest) {
           }
           
           // Nettoyer chaque partie plus agressivement
-          headers.push(...parts.map(part => {
+          headers.push(...parts.map((part, index) => {
+            // Log de debug pour la première colonne
+            if (index === 0) {
+              logger.info('migration', `🔍 DEBUG première partie brute: [${part}] (length: ${part.length})`);
+              logger.info('migration', `🔍 DEBUG code chars: [${Array.from(part).map(c => c.charCodeAt(0)).join(', ')}]`);
+            }
+            
             // Supprimer tous les guillemets en début et fin, même multiples
             let cleaned = part.replace(/^"*|"*$/g, '');
+            
+            // Log après premier nettoyage
+            if (index === 0) {
+              logger.info('migration', `🔍 DEBUG après replace: [${cleaned}] (length: ${cleaned.length})`);
+            }
+            
             // Remplacer les guillemets doubles internes par des guillemets simples
             cleaned = cleaned.replace(/""/g, '"');
             // Trim pour supprimer espaces
             cleaned = cleaned.trim();
+            
+            // Log après trim
+            if (index === 0) {
+              logger.info('migration', `🔍 DEBUG après trim: [${cleaned}] (length: ${cleaned.length})`);
+            }
+            
             // Si le résultat commence encore par un guillemet, le supprimer
             if (cleaned.startsWith('"')) {
+              logger.info('migration', `⚠️ Suppression guillemet début pour: [${cleaned}]`);
               cleaned = cleaned.substring(1);
             }
             if (cleaned.endsWith('"')) {
+              logger.info('migration', `⚠️ Suppression guillemet fin pour: [${cleaned}]`);
               cleaned = cleaned.substring(0, cleaned.length - 1);
             }
+            
+            // Log final
+            if (index === 0) {
+              logger.info('migration', `🔍 DEBUG final: [${cleaned}] (length: ${cleaned.length})`);
+            }
+            
             // Normaliser les caractères mal encodés
             cleaned = cleaned
               .replace(/Mati�re/gi, 'Matière')
@@ -156,8 +182,27 @@ export async function POST(request: NextRequest) {
           logger.info('migration', `🔧 Méthode de split utilisée, ${parts.length} parties détectées`);
         } else {
           // Headers déjà séparés
-          headers.push(...rawHeaders.map(h => {
+          logger.info('migration', `🔍 DEBUG: Headers déjà séparés, ${rawHeaders.length} headers`);
+          logger.info('migration', `🔍 DEBUG premier header brut: [${rawHeaders[0]}] type: ${typeof rawHeaders[0]}`);
+          
+          headers.push(...rawHeaders.map((h, index) => {
+            if (index === 0) {
+              logger.info('migration', `🔍 DEBUG avant nettoyage: [${String(h)}] (length: ${String(h).length})`);
+            }
+            
             let cleaned = String(h).replace(/^"*|"*$/g, '').replace(/""/g, '"');
+            
+            if (index === 0) {
+              logger.info('migration', `🔍 DEBUG après replace: [${cleaned}] (length: ${cleaned.length})`);
+              
+              // FIX: Le premier header peut avoir perdu son premier caractère lors du parsing xlsx
+              // Si le premier header commence par "tructure Level", le corriger en "Structure Level"
+              if (cleaned.toLowerCase() === 'tructure level') {
+                cleaned = 'Structure Level';
+                logger.info('migration', `🔧 CORRECTION: Premier header corrigé de "tructure Level" vers "Structure Level"`);
+              }
+            }
+            
             // Normaliser les caractères mal encodés
             cleaned = cleaned
               .replace(/Mati�re/gi, 'Matière')
@@ -167,6 +212,11 @@ export async function POST(request: NextRequest) {
               .replace(/d�coupe/gi, 'découpe')
               .replace(/Epaisseur/gi, 'Épaisseur')
               .replace(/�/g, 'é'); // Fallback pour tous les autres é mal encodés
+            
+            if (index === 0) {
+              logger.info('migration', `🔍 DEBUG final: [${cleaned}] (length: ${cleaned.length})`);
+            }
+            
             return cleaned;
           }));
         }
