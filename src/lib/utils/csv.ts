@@ -42,8 +42,10 @@ export async function generateCSV<T extends Record<string, any>>(
 
 /**
  * Lit un fichier CSV et retourne les données
+ * @param filePath Le chemin du fichier CSV
+ * @param delimiter Le délimiteur à utiliser (par défaut: point-virgule)
  */
-export function readCSV(filePath: string): Promise<any[]> {
+export function readCSV(filePath: string, delimiter?: string): Promise<any[]> {
   return new Promise((resolve, reject) => {
     const results: any[] = [];
     
@@ -61,13 +63,23 @@ export function readCSV(filePath: string): Promise<any[]> {
         return;
       }
 
-      const headers = lines[0].split(CSV_CONFIG.fieldDelimiter).map(h => h.trim().replace(/"/g, ''));
+      // Auto-detect delimiter si non spécifié
+      let fieldDelimiter = delimiter || CSV_CONFIG.fieldDelimiter;
+      if (!delimiter) {
+        // Si la première ligne contient des virgules entre guillemets, c'est probablement une virgule
+        const firstLine = lines[0];
+        if (firstLine.includes('","')) {
+          fieldDelimiter = ',';
+        }
+      }
+
+      const headers = lines[0].split(fieldDelimiter).map(h => h.trim().replace(/^"|"$/g, ''));
       
       for (let i = 1; i < lines.length; i++) {
         const line = lines[i].trim();
         if (line === '') continue;
         
-        const values = line.split(CSV_CONFIG.fieldDelimiter).map(v => v.trim().replace(/"/g, ''));
+        const values = line.split(fieldDelimiter).map(v => v.trim().replace(/^"|"$/g, ''));
         const row: any = {};
         
         headers.forEach((header, index) => {

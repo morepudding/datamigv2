@@ -119,12 +119,12 @@ export class MasterPartAllProcessor extends BaseProcessor {
         return false;
       }
       
-      // État doit être "released" OU ("in work" ET Revision !== "A")
+      // État doit être "released" OU (("in work" OU "under review") ET Revision !== "A")
       if (state === "released") {
         return true;
       }
       
-      if (state === "in work" && revision !== "A") {
+      if ((state === "in work" || state === "under review") && revision !== "A") {
         return true;
       }
       

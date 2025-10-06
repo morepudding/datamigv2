@@ -34,6 +34,31 @@ export class EngStructureProcessor extends BaseProcessor {
   }
 
   /**
+   * Trouve la valeur d'une colonne en gérant les noms de colonnes tronqués ou mal encodés
+   */
+  private getColumnValue(row: InputRow, columnName: string): any {
+    // Essayer d'abord avec le nom exact
+    if (row[columnName] !== undefined) {
+      return row[columnName];
+    }
+    
+    // Pour "Structure Level", essayer aussi "tructure Level" (S coupé)
+    if (columnName === 'Structure Level') {
+      if (row['tructure Level'] !== undefined) {
+        return row['tructure Level'];
+      }
+    }
+    
+    // Chercher une clé qui correspond partiellement
+    const keys = Object.keys(row);
+    const matchingKey = keys.find(key => 
+      key.toLowerCase().includes(columnName.toLowerCase().replace(/^s/, ''))
+    );
+    
+    return matchingKey ? row[matchingKey] : undefined;
+  }
+
+  /**
    * Validation des données d'entrée
    */
   protected validateInput(data: InputRow[]): ValidationResult {
@@ -51,7 +76,11 @@ export class EngStructureProcessor extends BaseProcessor {
     const requiredColumns = ['Number', 'Structure Level', 'Revision', 'State', 'Quantity'];
     if (data.length > 0) {
       const firstRow = data[0];
-      const missingColumns = requiredColumns.filter(col => !(col in firstRow));
+      const missingColumns = requiredColumns.filter(col => {
+        // Utiliser getColumnValue pour vérifier si la colonne existe (même avec un nom tronqué)
+        const value = this.getColumnValue(firstRow, col);
+        return value === undefined;
+      });
       
       if (missingColumns.length > 0) {
         errors.push({
@@ -122,14 +151,14 @@ export class EngStructureProcessor extends BaseProcessor {
    */
   private calculateVariables(data: InputRow[]): Array<InputRow & { AX: string; AY: string; AZ: number }> {
     return data.map((row, i) => {
-      const structureLevel = parseInt(this.cleanValue(row["Structure Level"]) || "0", 10);
+      const structureLevel = parseInt(this.cleanValue(this.getColumnValue(row, "Structure Level")) || "0", 10);
       
       // Variable AX - Identification du Parent
       let AX = "";
       if (structureLevel > 0) {
         // Recherche rétrograde pour trouver le parent
         for (let j = i - 1; j >= 0; j--) {
-          const prevLevel = parseInt(this.cleanValue(data[j]["Structure Level"]) || "0", 10);
+          const prevLevel = parseInt(this.cleanValue(this.getColumnValue(data[j], "Structure Level")) || "0", 10);
           if (prevLevel === (structureLevel - 1)) {
             AX = this.cleanValue(data[j]["Number"]);
             break;
