@@ -197,15 +197,15 @@ export class MasterPartProcessor extends BaseProcessor {
   }
 
   /**
-   * Calcul de la révision selon les nouvelles règles
+   * Calcul de la révision selon les règles métier
    * - Si [State] = Released → [Revision] reste telle quelle
    * - Si [State] = Under Review ET [Revision] <> A → [Revision] = N-1 (exemple B devient A)
    * - Si [State] = In Work ET [Revision] <> A → [Revision] = N-1 (exemple B devient A)
    * - Sinon révision reste vide
    */
   private computeRevision(revision: string, state: string): string {
-    const cleanState = state.toLowerCase();
-    const cleanRevision = revision.toUpperCase();
+    const cleanState = state.toLowerCase().trim();
+    const cleanRevision = revision.trim().toUpperCase();
     
     // Si State = "Released" → Retourner la révision telle quelle
     if (cleanState === "released") {
@@ -242,18 +242,30 @@ export class MasterPartProcessor extends BaseProcessor {
   }
 
   /**
+   * Extrait le site IFS depuis le champ "Site IFS"
+   * Exemple: "SAINT GILLES (FR014)" → "FR014"
+   */
+  private extractSiteIFS(siteIFS: string): string {
+    if (!siteIFS) return '';
+    
+    const match = siteIFS.match(/\(([A-Z0-9]+)\)/);
+    return match ? match[1] : '';
+  }
+
+  /**
    * Transformation d'une ligne vers le format de sortie
    */
   private transformRow(row: InputRow): MasterPartRow {
     const classification = this.cleanValue(row.Classification);
     const context = this.cleanValue(row.Context);
+    const isAN2902 = classification.includes("AN29-02-00");
     
     return {
       'PART_NO': this.cleanValue(row.Number),
       'DESCRIPTION': this.cleanValue(row["Part English designation"]) || this.cleanValue(row.Name),
       'INFO_TEXT': '', // Toujours vide
       'UNIT_CODE': 'PCS', // Toujours fixe
-      'CONFIGURABLE_DB': classification.includes("AN29-02-00") ? "CONFIGURED" : "NOT CONFIGURED",
+      'CONFIGURABLE_DB': isAN2902 ? "CONFIGURED" : "NOT CONFIGURED",
       'SERIAL_TRACKING_CODE_DB': 'NOT SERIAL TRACKING', // Toujours fixe
       'PROVIDE_DB': 'PHANTOM', // Toujours fixe
       'PART_REV': this.computeRevision(this.cleanValue(row.Revision), this.cleanValue(row.State)),
@@ -261,8 +273,8 @@ export class MasterPartProcessor extends BaseProcessor {
       'ASSORTMENT_NODE': this.extractAssortmentNode(classification),
       'CODE_GTIN': '', // Toujours vide
       'PART_MAIN_GROUP': this.extractProjectCode(context),
-      'FIRST_INVENTORY_SITE': 'FR008', // Toujours fixe
-      'CONFIG_FAMILY_ID': classification.includes("AN29-02-00") ? "ANY-XX-WOODP-0" : "",
+      'FIRST_INVENTORY_SITE': isAN2902 ? this.extractSiteIFS(this.cleanValue(row["Site IFS"])) : "",
+      'CONFIG_FAMILY_ID': isAN2902 ? "ANY-XX-WOOD-P" : "",
       'ALLOW_CHANGES_TO_CREATED_DOP_STRUCTURE': '', // Toujours vide
       'ALLOW_AS_NOT_CONSUMED': 'FALSE', // Toujours fixe
       'VOLUME_NET': 0, // Toujours fixe

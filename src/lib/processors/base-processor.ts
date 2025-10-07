@@ -156,12 +156,29 @@ export abstract class BaseProcessor {
 
   /**
    * Extrait le code projet depuis le contexte
+   * Règle spéciale: Les contextes suivants doivent renvoyer vide:
+   * - PRODUCTION TOOLS
+   * - SUPPLIER CATALOG COMPONENTS
+   * - SCREWS AND FASTENINGS
    */
   protected extractProjectCode(context: string): string {
     if (!context || context.length < 5) {
       return '';
     }
 
+    // Contextes à exclure (renvoient vide)
+    const excludedContexts = [
+      'PRODUCTION TOOLS',
+      'SUPPLIER CATALOG COMPONENTS',
+      'SCREWS AND FASTENINGS'
+    ];
+
+    const contextUpper = context.toUpperCase().trim();
+    if (excludedContexts.some(excluded => contextUpper.includes(excluded))) {
+      return '';
+    }
+
+    // Extraction normale: prendre les 5 premiers caractères
     const code = context.substring(0, 5);
     return /^[A-Z0-9]{5}$/.test(code) ? code : '';
   }
